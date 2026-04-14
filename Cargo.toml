@@ -1,0 +1,34 @@
+[package]
+name = "fiole"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+byteorder = "1.5.0"
+byteview = "0.10.1"
+facet = { version = "0.44", features = ["jiff02", "uuid"], optional = true }
+facet-format = { version = "0.44", optional = true }
+facet-json = { version = "0.44", optional = true }
+facet-postcard = { version = "0.44", optional = true }
+facet-msgpack = { version = "0.44", optional = true }
+fjall = "3.1.3"
+postcard = { version = "1", features = ["alloc"], optional = true }
+rmp-serde = { version = "1", optional = true }
+roaring = { version = "0.11", optional = true }
+serde = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }
+rkyv = { version = "0.8.15", optional = true }
+
+[features]
+default = []
+facet_json = ["facet-json", "facet-format", "facet"]
+facet_postcard = ["facet-postcard", "facet-format", "facet"]
+facet_msgpack = ["facet-msgpack", "facet-format", "facet"]
+serde_json = ["dep:serde_json", "serde"]
+serde_postcard = ["postcard", "serde"]
+serde_msgpack = ["rmp-serde", "serde"]
+roaring = ["dep:roaring"]
+rkyv = ["dep:rkyv"]
+
+[dev-dependencies]
+tempfile = "3.27.0"
