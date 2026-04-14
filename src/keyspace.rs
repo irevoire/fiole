@@ -351,6 +351,26 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         Ok(Iter::new(rtxn.inner().prefix(&self.inner, prefix)))
     }
 
+    /// Removes an item from the keyspace.
+    ///
+    /// The key may be up to 65536 bytes long.
+    /// Shorter keys result in better performance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder).unwrap();
+    /// # let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// ks.insert(&mut wtxn, "a", "abc").unwrap();
+    /// assert!(!ks.is_empty(&wtxn).unwrap());
+    ///
+    /// ks.remove(&mut wtxn, "a").unwrap();
+    /// assert!(ks.is_empty(&wtxn).unwrap());
+    /// ```
     #[inline]
     pub fn remove(&self, wtxn: &mut Wtxn, key: &Key::Item) -> Result<(), Key::Error> {
         let key = Key::encode(key)?;
