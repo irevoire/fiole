@@ -2,6 +2,7 @@
 name = "fiole"
 version = "0.1.0"
 edition = "2024"
+description = "An opinionated wrapper around fjall "
 documentation = "https://docs.rs/fiole"
 repository = "https://github.com/irevoire/fiole"
 authors = ["Tamo <irevoire@hotmail.fr>"]
