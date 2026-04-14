@@ -84,8 +84,6 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// Returns the first key-value pair in the keyspace.
     /// The key in this pair is the minimum key in the keyspace.
     ///
-    /// The operation will run wrapped in a read snapshot.
-    ///
     /// # Examples
     ///
     /// ```
@@ -107,8 +105,6 @@ impl<Key, Value> Keyspace<Key, Value> {
 
     /// Returns the last key-value pair in the keyspace.
     /// The key in this pair is the maximum key in the keyspace.
-    ///
-    /// The operation will run wrapped in a read snapshot.
     ///
     /// # Examples
     ///
@@ -268,8 +264,6 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
 
     /// Removes an item and returns its value if it existed.
     ///
-    /// The operation will run wrapped in a transaction.
-    ///
     /// ```
     /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
     /// # use std::sync::Arc;
@@ -372,8 +366,6 @@ impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
     /// Shorter keys and values result in better performance.
     ///
     /// If the key already exists, the item will be overwritten.
-    ///
-    /// The operation will run wrapped in a transaction.
     ///
     /// # Examples
     ///
