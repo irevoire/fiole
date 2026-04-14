@@ -1,3 +1,5 @@
+//! Types that can be used to serialize and deserialize keys or values inside [`crate::Keyspace`]
+
 use std::convert::Infallible;
 
 use fjall::Slice;

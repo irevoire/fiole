@@ -1,5 +1,6 @@
 use fjall::{Conflict, OptimisticWriteTx, PersistMode, Snapshot};
 
+/// A read and write transaction.
 #[repr(transparent)]
 pub struct Wtxn {
     pub(crate) inner: OptimisticWriteTx,
@@ -24,12 +25,16 @@ impl Wtxn {
     }
 }
 
+/// A read-only transaction.
+///
+/// When defining function parameters, prefer using `&impl` [`Readable`] to make your function work both with `Rtxn` and [`Wtxn`].
 #[repr(transparent)]
 #[derive(Clone)]
 pub struct Rtxn {
     pub(crate) inner: Snapshot,
 }
 
+/// To be used when your function needs to read data from the database.
 pub trait Readable {
     fn inner(&self) -> &impl fjall::Readable;
 }
