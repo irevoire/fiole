@@ -2,6 +2,11 @@
 name = "fiole"
 version = "0.1.0"
 edition = "2024"
+documentation = "https://docs.rs/fiole"
+repository = "https://github.com/irevoire/fiole"
+authors = ["Tamo <irevoire@hotmail.fr>"]
+license = "MIT OR Apache-2.0"
+categories = ["database", "api", "wrapper"]
 
 [dependencies]
 byteorder = "1.5.0"
