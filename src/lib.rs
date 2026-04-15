@@ -14,6 +14,8 @@ pub use fjall::KeyspaceCreateOptions;
 pub use keyspace::Keyspace;
 pub use txn::{Readable, Rtxn, Wtxn};
 
+pub use byteorder;
+
 /// Guard to access key-value pairs.
 pub struct Guard<Key, Value>(fjall::Guard, PhantomData<(Key, Value)>);
 
