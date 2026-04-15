@@ -1,0 +1,10 @@
+{
+  "languages": {
+    "rust": {
+      "lsp_command": {
+        "initialization_options": { "cargo": { "features": "all" } },
+        "command": { "command": "rust-analyzer", "arguments": [] }
+      }
+    }
+  }
+}
