@@ -9,6 +9,10 @@ authors = ["Tamo <irevoire@hotmail.fr>"]
 license = "MIT OR Apache-2.0"
 categories = ["database", "api-bindings", "database-implementations"]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--generate-link-to-definition"]
+
 [dependencies]
 byteorder = "1.5.0"
 byteview = "0.10.1"
