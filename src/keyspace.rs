@@ -255,7 +255,8 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
         rtxn: &impl Readable,
         key: &Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
-        let key = Key::encode(key).map_err(Error::Key)?;
+        let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
+
         match rtxn.inner().get(&self.inner, key).map_err(Error::Fjall)? {
             Some(value) => Value::decode(value).map(Some).map_err(Error::Value),
             None => Ok(None),
@@ -286,7 +287,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
         wtxn: &mut Wtxn,
         key: &Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
-        let key = Key::encode(key).map_err(Error::Key)?;
+        let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         match wtxn.inner.take(&self.inner, key).map_err(Error::Fjall)? {
             Some(value) => Value::decode(value).map(Some).map_err(Error::Value),
             None => Ok(None),
@@ -302,7 +303,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         rtxn: &impl Readable,
         key: &Key::Item,
     ) -> Result<bool, Error<Key::Error, Infallible>> {
-        let key = Key::encode(key).map_err(Error::Key)?;
+        let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner()
             .contains_key(&self.inner, key)
             .map_err(Error::Fjall)
@@ -315,7 +316,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         rtxn: &impl Readable,
         key: &Key::Item,
     ) -> Result<Option<u32>, Error<Key::Error, Infallible>> {
-        let key = Key::encode(key).map_err(Error::Key)?;
+        let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner().size_of(&self.inner, key).map_err(Error::Fjall)
     }
 
@@ -326,13 +327,13 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         range: R,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let start = match range.start_bound() {
-            Bound::Included(key) => Bound::Excluded(Key::encode(key)?),
-            Bound::Excluded(key) => Bound::Included(Key::encode(key)?),
+            Bound::Included(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
+            Bound::Excluded(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
             Bound::Unbounded => Bound::Unbounded,
         };
         let end = match range.end_bound() {
-            Bound::Included(key) => Bound::Excluded(Key::encode(key)?),
-            Bound::Excluded(key) => Bound::Included(Key::encode(key)?),
+            Bound::Included(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
+            Bound::Excluded(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
             Bound::Unbounded => Bound::Unbounded,
         };
 
@@ -346,7 +347,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         rtxn: &impl Readable,
         prefix: &Key::Item,
     ) -> Result<Iter<Key, Value>, Key::Error> {
-        let prefix = Key::encode(prefix)?;
+        let prefix = Key::encode_alloc(prefix)?.finish();
 
         Ok(Iter::new(rtxn.inner().prefix(&self.inner, prefix)))
     }
@@ -373,7 +374,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     /// ```
     #[inline]
     pub fn remove(&self, wtxn: &mut Wtxn, key: &Key::Item) -> Result<(), Key::Error> {
-        let key = Key::encode(key)?;
+        let key = Key::encode_alloc(key)?.finish();
         wtxn.inner.remove(&self.inner, key);
         Ok(())
     }
@@ -407,8 +408,8 @@ impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
         key: &Key::Item,
         value: &Value::Item,
     ) -> Result<(), Error<Key::Error, Value::Error>> {
-        let key = Key::encode(key).map_err(Error::Key)?;
-        let value = Value::encode(value).map_err(Error::Value)?;
+        let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
+        let value = Value::encode_alloc(value).map_err(Error::Value)?.finish();
         wtxn.inner.insert(&self.inner, key, value);
         Ok(())
     }

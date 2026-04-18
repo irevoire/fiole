@@ -2,7 +2,7 @@ use std::{convert::Infallible, fmt};
 
 use fjall::Slice;
 
-use crate::codec::{Decode, Encode};
+use crate::codec::{Decode, Encode, EncodingVec, Fresh};
 use std::error::Error as StdError;
 
 /// Describe the unit type. Fail to decode if the bytes contains anything. See [`super::DecodeIgnore`] for that purpose.
@@ -12,8 +12,11 @@ impl Encode for Unit {
     type Item = ();
     type Error = Infallible;
 
-    fn encode(_item: &Self::Item) -> Result<Slice, Self::Error> {
-        Ok(Slice::new(&[]))
+    fn encode(
+        into: EncodingVec<Fresh>,
+        _item: &Self::Item,
+    ) -> Result<EncodingVec<Fresh>, Self::Error> {
+        Ok(into)
     }
 }
 

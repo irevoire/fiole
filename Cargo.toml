@@ -22,7 +22,7 @@ facet-json = { version = "0.44", optional = true }
 facet-postcard = { version = "0.44", optional = true }
 facet-msgpack = { version = "0.44", optional = true }
 fjall = "3.1.3"
-postcard = { version = "1", features = ["alloc"], optional = true }
+postcard = { version = "1", features = ["alloc", "use-std"], optional = true }
 rmp-serde = { version = "1", optional = true }
 roaring = { version = "0.11", optional = true }
 serde = { version = "1", optional = true }

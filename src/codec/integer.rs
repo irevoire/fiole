@@ -1,4 +1,4 @@
-use crate::codec::{Decode, Encode};
+use crate::codec::{Decode, Encode, EncodingVec, Fresh};
 use byteorder::{ByteOrder, ReadBytesExt};
 use fjall::Slice;
 use std::convert::Infallible;
@@ -11,8 +11,13 @@ impl Encode for U8 {
     type Item = u8;
     type Error = Infallible;
 
-    fn encode(item: &Self::Item) -> Result<Slice, Self::Error> {
-        Ok(Slice::new(&[*item]))
+    fn encode(
+        into: EncodingVec<Fresh>,
+        item: &Self::Item,
+    ) -> Result<EncodingVec<Fresh>, Self::Error> {
+        let mut ret = into.edit();
+        ret.push(*item);
+        Ok(ret.make_fresh())
     }
 }
 
@@ -32,8 +37,13 @@ impl Encode for I8 {
     type Item = i8;
     type Error = Infallible;
 
-    fn encode(item: &Self::Item) -> Result<Slice, Self::Error> {
-        Ok(Slice::new(&[*item as u8]))
+    fn encode(
+        into: EncodingVec<Fresh>,
+        item: &Self::Item,
+    ) -> Result<EncodingVec<Fresh>, Self::Error> {
+        let mut ret = into.edit();
+        ret.push(*item as u8);
+        Ok(ret.make_fresh())
     }
 }
 
@@ -57,10 +67,15 @@ macro_rules! define_type {
             type Item = $native;
             type Error = Infallible;
 
-            fn encode(item: &Self::Item) -> Result<Slice, Self::Error> {
-                let mut buf = vec![0; size_of::<Self::Item>()];
+            fn encode(
+                into: EncodingVec<Fresh>,
+                item: &Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                let mut ret = into.edit();
+                let mut buf = [0; size_of::<Self::Item>()];
                 O::$write_method(&mut buf, *item);
-                Ok(Slice::from(buf))
+                ret.extend(&buf);
+                Ok(ret.make_fresh())
             }
         }
 

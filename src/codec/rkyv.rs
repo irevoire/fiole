@@ -11,7 +11,7 @@ use rkyv::{
     Archive, Deserialize, Serialize,
 };
 
-use crate::codec::{Decode, Encode};
+use crate::codec::{Decode, Encode, EncodingVec, Fresh};
 
 /// Encode a struct with the rkyv format. Caution, this is not zerocopy.
 /// - `T` is the type you want to encode.
@@ -26,8 +26,15 @@ where
     type Item = T;
     type Error = E;
 
-    fn encode(item: &Self::Item) -> Result<Slice, Self::Error> {
-        Ok(rkyv::to_bytes(item)?.into_vec().into())
+    fn encode(
+        into: EncodingVec<Fresh>,
+        item: &Self::Item,
+    ) -> Result<EncodingVec<Fresh>, Self::Error> {
+        let mut ret = into.edit();
+        // TODO: Get rid of this useless alloc
+        let bytes = rkyv::to_bytes(item)?;
+        ret.extend(bytes.into_iter().copied());
+        Ok(ret.make_fresh())
     }
 }
 
@@ -50,7 +57,7 @@ where
 mod test {
     use rkyv::{Archive, Deserialize, Serialize};
 
-    use crate::codec::{Decode, Encode, Rkyv};
+    use crate::codec::{Decode, Encode, EncodingVec, Rkyv};
 
     #[test]
     fn encode_and_decode() {
@@ -69,10 +76,12 @@ mod test {
         let rkyv_deserialized =
             rkyv::from_bytes::<Example, rkyv::rancor::Panic>(&rkyv_bytes).unwrap();
 
-        let codec_bytes = Rkyv::<Example, rkyv::rancor::Panic>::encode(&value).unwrap();
-        assert_eq!(rkyv_bytes.as_slice(), codec_bytes);
+        let codec_bytes =
+            Rkyv::<Example, rkyv::rancor::Panic>::encode(EncodingVec::new(), &value).unwrap();
+        assert_eq!(rkyv_bytes.as_slice(), codec_bytes.as_slice());
 
-        let codec_deserialized = Rkyv::<Example, rkyv::rancor::Panic>::decode(codec_bytes).unwrap();
+        let codec_deserialized =
+            Rkyv::<Example, rkyv::rancor::Panic>::decode(codec_bytes.into_fjall_slice()).unwrap();
         assert_eq!(codec_deserialized, rkyv_deserialized);
         assert_eq!(codec_deserialized, value);
     }
