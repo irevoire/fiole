@@ -1,6 +1,12 @@
 //! Types that can be used to serialize and deserialize keys or values inside [`crate::Keyspace`]
 
-use std::{convert::Infallible, fmt, io::Write, marker::PhantomData, ops::Deref};
+use std::{
+    convert::Infallible,
+    fmt,
+    io::{Cursor, Read, Write},
+    marker::PhantomData,
+    ops::Deref,
+};
 
 use fjall::Slice;
 
@@ -99,6 +105,12 @@ impl<T> EncodingVec<T> {
 
     pub fn into_fjall_slice(self) -> Slice {
         Slice::from(self.vec)
+    }
+
+    pub fn into_decoding_vec(self) -> DecodingVec {
+        DecodingVec {
+            cursor: Cursor::new(self.vec),
+        }
     }
 }
 
@@ -208,6 +220,43 @@ pub trait Encode {
     }
 }
 
+pub struct DecodingVec {
+    cursor: Cursor<Vec<u8>>,
+}
+
+impl From<Slice> for DecodingVec {
+    fn from(value: Slice) -> Self {
+        Self::new(value.to_vec())
+    }
+}
+
+impl DecodingVec {
+    pub fn new(vec: Vec<u8>) -> Self {
+        Self {
+            cursor: Cursor::new(vec),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.cursor.get_ref().len() == self.cursor.position() as usize
+    }
+
+    /// Useful when your codec is going to consume everything till the end.
+    pub fn consume(&mut self) -> Vec<u8> {
+        let cursor = std::mem::take(&mut self.cursor);
+        let pos = cursor.position();
+        let mut vec = cursor.into_inner();
+        vec.drain(..pos as usize);
+        vec
+    }
+}
+
+impl Read for DecodingVec {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.cursor.read(buf)
+    }
+}
+
 /// Define how to decode an object from the bytes stored in fjall to your type.
 pub trait Decode {
     /// The type to decode.
@@ -215,8 +264,8 @@ pub trait Decode {
     /// The error returned if the type can't be decoded. Uses [`std::convert::Infallible`] if the decoding can't fail
     type Error;
 
-    /// Decode the given bytes as your item.
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error>;
+    /// Decode the given bytes as your item. You must not read more bytes than required otherwise you might be eating the bytes of another codec.
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error>;
 }
 
 /// Convenient struct to ignore the decoding part and return the unit type instead.
@@ -228,7 +277,7 @@ impl Decode for DecodeIgnore {
     type Item = ();
     type Error = Infallible;
 
-    fn decode(_: Slice) -> Result<Self::Item, Self::Error> {
+    fn decode(_: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
         Ok(())
     }
 }

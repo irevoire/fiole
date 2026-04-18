@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use fjall::Slice;
 use rkyv::{
     api::high::{HighSerializer, HighValidator},
     bytecheck::CheckBytes,
@@ -11,11 +10,12 @@ use rkyv::{
     Archive, Deserialize, Serialize,
 };
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct with the rkyv format. Caution, this is not zerocopy.
 /// - `T` is the type you want to encode.
 /// - `E` is the error type that'll be returned by rkyv. It must implements the [`rkyv::rancor::Source`] trait.
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Rkyv<T, E>(PhantomData<(T, E)>);
 
 impl<T, E> Encode for Rkyv<T, E>
@@ -48,8 +48,8 @@ where
     type Item = T;
     type Error = E;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        rkyv::from_bytes(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        rkyv::from_bytes(&bytes.consume())
     }
 }
 
@@ -81,7 +81,8 @@ mod test {
         assert_eq!(rkyv_bytes.as_slice(), codec_bytes.as_slice());
 
         let codec_deserialized =
-            Rkyv::<Example, rkyv::rancor::Panic>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            Rkyv::<Example, rkyv::rancor::Panic>::decode(&mut codec_bytes.into_decoding_vec())
+                .unwrap();
         assert_eq!(codec_deserialized, rkyv_deserialized);
         assert_eq!(codec_deserialized, value);
     }

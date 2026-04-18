@@ -1,10 +1,9 @@
 use std::convert::Infallible;
 
-use fjall::Slice;
-
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Describes a byte slice `[u8]` that is totally borrowed and doesn't depend on any memory alignment.
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub enum Bytes {}
 
 impl Encode for Bytes {
@@ -22,10 +21,10 @@ impl Encode for Bytes {
 }
 
 impl Decode for Bytes {
-    type Item = Slice;
+    type Item = Vec<u8>;
     type Error = Infallible;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        Ok(bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        Ok(bytes.consume())
     }
 }

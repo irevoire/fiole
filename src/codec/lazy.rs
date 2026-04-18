@@ -1,8 +1,6 @@
 use std::{convert::Infallible, marker::PhantomData};
 
-use fjall::Slice;
-
-use crate::codec::Decode;
+use crate::codec::{Decode, DecodingVec};
 
 /// Lazily decodes the data bytes.
 ///
@@ -15,15 +13,15 @@ impl<C: 'static> Decode for LazyDecode<C> {
     type Item = Lazy<C>;
     type Error = Infallible;
 
-    fn decode(bytes: fjall::Slice) -> Result<Self::Item, Self::Error> {
-        Ok(Lazy(bytes, PhantomData))
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        Ok(Lazy(bytes.consume(), PhantomData))
     }
 }
 
 /// Owns bytes that can be decoded on demand.
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct Lazy<C>(Slice, PhantomData<C>);
+pub struct Lazy<C>(Vec<u8>, PhantomData<C>);
 
 impl<C> Clone for Lazy<C> {
     fn clone(&self) -> Self {
@@ -41,6 +39,6 @@ impl<C> Lazy<C> {
 impl<C: Decode> Lazy<C> {
     /// Decode the given bytes according to the codec.
     pub fn decode(self) -> Result<C::Item, C::Error> {
-        C::decode(self.0)
+        C::decode(&mut DecodingVec::new(self.0))
     }
 }

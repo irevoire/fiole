@@ -1,9 +1,11 @@
 use std::marker::PhantomData;
 
-use fjall::Slice;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{
+    de::{DeserializeOwned, Error},
+    Serialize,
+};
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as json through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 /// /!\ Take care of the flattened struct and untyped enum. In some cases, they serialize correctly but fail to deserialize.
@@ -27,8 +29,11 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
     type Item = T;
     type Error = serde_json::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        serde_json::from_slice(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        serde_json::de::Deserializer::from_reader(bytes)
+            .into_iter()
+            .next()
+            .ok_or_else(|| serde_json::Error::custom("Empty slice"))?
     }
 }
 
@@ -58,7 +63,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =
-            SerdeJson::<Example>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            SerdeJson::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

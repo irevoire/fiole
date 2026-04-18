@@ -60,7 +60,7 @@ impl<Key: codec::Decode, Value> Guard<Key, Value> {
     #[must_use]
     pub fn key(self) -> Result<Key::Item, Error<Key::Error, Infallible>> {
         let key = self.0.key().map_err(Error::Fjall)?;
-        Key::decode(key).map_err(Error::Key)
+        Key::decode(&mut key.into()).map_err(Error::Key)
     }
 }
 
@@ -70,7 +70,7 @@ impl<Key, Value: codec::Decode> Guard<Key, Value> {
     #[must_use]
     pub fn value(self) -> Result<Value::Item, Error<Infallible, Value::Error>> {
         let value = self.0.value().map_err(Error::Fjall)?;
-        Value::decode(value).map_err(Error::Value)
+        Value::decode(&mut value.into()).map_err(Error::Value)
     }
 }
 
@@ -81,8 +81,8 @@ impl<Key: codec::Decode, Value: codec::Decode> Guard<Key, Value> {
     pub fn into_inner(self) -> Result<(Key::Item, Value::Item), Error<Key::Error, Value::Error>> {
         let (k, v) = self.0.into_inner().map_err(Error::Fjall)?;
         Ok((
-            Key::decode(k).map_err(Error::Key)?,
-            Value::decode(v).map_err(Error::Value)?,
+            Key::decode(&mut k.into()).map_err(Error::Key)?,
+            Value::decode(&mut v.into()).map_err(Error::Value)?,
         ))
     }
 }

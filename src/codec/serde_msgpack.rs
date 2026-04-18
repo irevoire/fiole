@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
-use fjall::Slice;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as [`msgpack`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
@@ -26,8 +25,8 @@ impl<T: DeserializeOwned> Decode for SerdeMsgpack<T> {
     type Item = T;
     type Error = rmp_serde::decode::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        rmp_serde::from_slice(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        rmp_serde::from_read(bytes)
     }
 }
 
@@ -57,7 +56,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =
-            SerdeMsgpack::<Example>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            SerdeMsgpack::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

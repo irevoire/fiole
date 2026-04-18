@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
 use facet::Facet;
-use fjall::Slice;
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as [msgpack](https://msgpack.org/) through the [`facet::Facet`] trait.
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetMsgpack<T>(PhantomData<T>);
 
 impl<T: Facet<'static>> Encode for FacetMsgpack<T> {
@@ -26,8 +26,8 @@ impl<T: Facet<'static>> Decode for FacetMsgpack<T> {
     type Item = T;
     type Error = facet_msgpack::DeserializeError;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        facet_msgpack::from_slice(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        facet_msgpack::from_slice(&bytes.consume())
     }
 }
 
@@ -57,7 +57,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =
-            FacetMsgpack::<Example>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            FacetMsgpack::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

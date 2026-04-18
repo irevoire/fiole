@@ -1,10 +1,9 @@
 use std::{convert::Infallible, string::FromUtf8Error};
 
-use fjall::Slice;
-
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Describe a raw string without len or termination byte.
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Str {}
 
 impl Encode for Str {
@@ -25,7 +24,7 @@ impl Decode for Str {
     type Item = String;
     type Error = FromUtf8Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        String::from_utf8(bytes.to_vec())
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        String::from_utf8(bytes.consume())
     }
 }

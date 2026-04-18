@@ -1,7 +1,6 @@
-use fjall::Slice;
 use roaring::{RoaringBitmap, RoaringTreemap};
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a roaring bitmap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringBitmapCodec {}
@@ -24,8 +23,8 @@ impl Decode for RoaringBitmapCodec {
     type Item = RoaringBitmap;
     type Error = std::io::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        RoaringBitmap::deserialize_from(&mut bytes.as_ref())
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        RoaringBitmap::deserialize_from(bytes)
     }
 }
 
@@ -50,8 +49,8 @@ impl Decode for RoaringTreemapCodec {
     type Item = RoaringTreemap;
     type Error = std::io::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        RoaringTreemap::deserialize_from(&mut bytes.as_ref())
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        RoaringTreemap::deserialize_from(bytes)
     }
 }
 
@@ -73,7 +72,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), roaring_bytes);
 
         let codec_deserialized =
-            RoaringBitmapCodec::decode(codec_bytes.into_fjall_slice()).unwrap();
+            RoaringBitmapCodec::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, roaring_deserialized);
         assert_eq!(codec_deserialized, bitmap);
@@ -91,7 +90,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), roaring_bytes);
 
         let codec_deserialized =
-            RoaringTreemapCodec::decode(codec_bytes.into_fjall_slice()).unwrap();
+            RoaringTreemapCodec::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, roaring_deserialized);
         assert_eq!(codec_deserialized, bitmap);

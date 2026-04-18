@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 
 use facet::Facet;
-use facet_format::SerializeError;
-use facet_json::{DeserializeError, JsonSerializeError};
-use fjall::Slice;
+use facet_json::DeserializeError;
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as json through the [`facet::Facet`] trait.
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetJson<T>(PhantomData<T>);
 
 impl<T: Facet<'static>> Encode for FacetJson<T> {
@@ -28,8 +27,8 @@ impl<T: Facet<'static>> Decode for FacetJson<T> {
     type Item = T;
     type Error = DeserializeError;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        facet_json::from_slice(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        facet_json::from_slice(&bytes.consume())
     }
 }
 
@@ -59,7 +58,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =
-            FacetJson::<Example>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            FacetJson::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

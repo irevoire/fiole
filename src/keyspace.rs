@@ -258,7 +258,9 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
 
         match rtxn.inner().get(&self.inner, key).map_err(Error::Fjall)? {
-            Some(value) => Value::decode(value).map(Some).map_err(Error::Value),
+            Some(value) => Value::decode(&mut value.into())
+                .map(Some)
+                .map_err(Error::Value),
             None => Ok(None),
         }
     }
@@ -289,7 +291,9 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         match wtxn.inner.take(&self.inner, key).map_err(Error::Fjall)? {
-            Some(value) => Value::decode(value).map(Some).map_err(Error::Value),
+            Some(value) => Value::decode(&mut value.into())
+                .map(Some)
+                .map_err(Error::Value),
             None => Ok(None),
         }
     }

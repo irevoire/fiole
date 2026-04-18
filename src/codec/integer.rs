@@ -1,6 +1,6 @@
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 use byteorder::{ByteOrder, ReadBytesExt};
-use fjall::Slice;
+
 use std::convert::Infallible;
 use std::marker::PhantomData;
 
@@ -25,8 +25,8 @@ impl Decode for U8 {
     type Item = u8;
     type Error = std::io::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        (&*bytes).read_u8()
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        bytes.read_u8()
     }
 }
 
@@ -51,8 +51,8 @@ impl Decode for I8 {
     type Item = i8;
     type Error = std::io::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        (&*bytes).read_i8()
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        bytes.read_i8()
     }
 }
 
@@ -83,8 +83,7 @@ macro_rules! define_type {
             type Item = $native;
             type Error = std::io::Error;
 
-            fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-                let mut bytes: &[u8] = (&*bytes);
+            fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
                 bytes.$read_method::<O>().map_err(Into::into)
             }
         }

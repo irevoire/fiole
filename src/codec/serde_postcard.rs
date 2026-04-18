@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
-use fjall::Slice;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::codec::{Decode, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as [`postcard`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdePostcard<T>(PhantomData<T>);
@@ -26,8 +25,8 @@ impl<T: DeserializeOwned> Decode for SerdePostcard<T> {
     type Item = T;
     type Error = postcard::Error;
 
-    fn decode(bytes: Slice) -> Result<Self::Item, Self::Error> {
-        postcard::from_bytes(&bytes)
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        postcard::from_bytes(&bytes.consume())
     }
 }
 
@@ -57,7 +56,7 @@ mod test {
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =
-            SerdePostcard::<Example>::decode(codec_bytes.into_fjall_slice()).unwrap();
+            SerdePostcard::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);
