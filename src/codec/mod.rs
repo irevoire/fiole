@@ -1,6 +1,7 @@
 //! Types that can be used to serialize and deserialize keys or values inside [`crate::Keyspace`]
 
 use std::{
+    borrow::Cow,
     convert::Infallible,
     fmt,
     io::{Cursor, Read, Write},
@@ -12,6 +13,8 @@ use fjall::Slice;
 
 mod bytes;
 pub use bytes::*;
+mod sized_codec;
+pub use sized_codec::*;
 mod lazy;
 pub use lazy::*;
 mod integer;
@@ -61,7 +64,7 @@ pub enum Fresh {}
 pub enum Dirty {}
 
 pub struct EncodingVec<T> {
-    vec: Vec<u8>,
+    pub(crate) vec: Vec<u8>,
     start_at: usize,
     marker: PhantomData<T>,
 }
@@ -107,10 +110,16 @@ impl<T> EncodingVec<T> {
         Slice::from(self.vec)
     }
 
-    pub fn into_decoding_vec(self) -> DecodingVec {
-        DecodingVec {
-            cursor: Cursor::new(self.vec),
-        }
+    pub fn into_decoding_vec(self) -> DecodingVec<'static> {
+        DecodingVec::new(self.vec)
+    }
+
+    pub fn absolute_pos(&self) -> usize {
+        self.vec.len()
+    }
+
+    pub fn retrieve_space(&mut self, token: SpaceToken) -> &mut [u8] {
+        &mut self.vec[token.pos..token.pos + token.size]
     }
 }
 
@@ -132,6 +141,11 @@ impl EncodingVec<Fresh> {
     }
 }
 
+pub struct SpaceToken {
+    pos: usize,
+    size: usize,
+}
+
 impl EncodingVec<Dirty> {
     pub fn push(&mut self, byte: u8) {
         self.vec.push(byte);
@@ -147,6 +161,12 @@ impl EncodingVec<Dirty> {
 
     pub fn remove(&mut self, index: usize) -> u8 {
         self.vec.remove(index + self.start_at)
+    }
+
+    pub fn save_space_for_later(&mut self, size: usize, fill_with: u8) -> SpaceToken {
+        let pos = self.vec.len();
+        self.vec.resize(pos + size, fill_with);
+        SpaceToken { pos, size }
     }
 
     pub fn reserve(&mut self, additional: usize) {
@@ -204,7 +224,7 @@ impl<'a> Extend<&'a u8> for EncodingVec<Dirty> {
 /// Define how to encode an object to the bytes that will be stored in fjall.
 pub trait Encode {
     /// The type to encode.
-    type Item: ?Sized;
+    type Item: ?std::marker::Sized;
     /// The error returned if the type can't be encoded. Uses [`std::convert::Infallible`] if the encoding can't fail
     type Error;
 
@@ -220,20 +240,35 @@ pub trait Encode {
     }
 }
 
-pub struct DecodingVec {
-    cursor: Cursor<Vec<u8>>,
+pub struct DecodingVec<'a> {
+    cursor: Cursor<Cow<'a, [u8]>>,
 }
 
-impl From<Slice> for DecodingVec {
+impl From<Slice> for DecodingVec<'static> {
     fn from(value: Slice) -> Self {
         Self::new(value.to_vec())
     }
 }
 
-impl DecodingVec {
+impl<'a> DecodingVec<'a> {
     pub fn new(vec: Vec<u8>) -> Self {
         Self {
-            cursor: Cursor::new(vec),
+            cursor: Cursor::new(vec.into()),
+        }
+    }
+
+    /// Equivalent to [`std::io::Read::take`] except it return a `DecodingVec` which can be used within another codec.
+    pub fn take_next<'b>(&'b mut self, size: usize) -> DecodingVec<'b> {
+        let current_pos = self.cursor.position() as usize;
+        let inner = self.cursor.get_ref();
+        let take_until = inner.len().min(current_pos.saturating_add(size));
+        self.cursor.set_position(take_until as u64);
+
+        // Rust don't understand we're not touching the inner vec so we have to take the ref again.
+        let inner = self.cursor.get_ref();
+        let data = &inner[current_pos..take_until];
+        DecodingVec {
+            cursor: Cursor::new(Cow::Borrowed(data)),
         }
     }
 
@@ -244,14 +279,18 @@ impl DecodingVec {
     /// Useful when your codec is going to consume everything till the end.
     pub fn consume(&mut self) -> Vec<u8> {
         let cursor = std::mem::take(&mut self.cursor);
-        let pos = cursor.position();
-        let mut vec = cursor.into_inner();
-        vec.drain(..pos as usize);
-        vec
+        let pos = cursor.position() as usize;
+        match cursor.into_inner() {
+            Cow::Borrowed(slice) => slice[pos..].to_vec(),
+            Cow::Owned(mut vec) => {
+                vec.drain(..pos);
+                vec
+            }
+        }
     }
 }
 
-impl Read for DecodingVec {
+impl Read for DecodingVec<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.cursor.read(buf)
     }
