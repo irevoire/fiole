@@ -5,20 +5,20 @@ use fjall::Slice;
 use crate::codec::DecodingVec;
 
 /// Define how to encode an object to the bytes that will be stored in fjall.
-pub trait Encode {
+pub trait Encode<'a> {
     /// The type to encode.
-    type Item: ?std::marker::Sized;
+    type Item: ?std::marker::Sized + 'a;
     /// The error returned if the type can't be encoded. Uses [`std::convert::Infallible`] if the encoding can't fail
     type Error;
 
     /// Encode the given item into the specified `EncodingVec`.
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'a Self::Item,
     ) -> Result<EncodingVec<Fresh>, Self::Error>;
 
     /// Encode the given item as bytes in an allocated `EncodingVec`
-    fn encode_alloc(item: &Self::Item) -> Result<EncodingVec<Fresh>, Self::Error> {
+    fn encode_alloc(item: &'a Self::Item) -> Result<EncodingVec<Fresh>, Self::Error> {
         Self::encode(EncodingVec::new(), item)
     }
 }

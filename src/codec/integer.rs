@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 /// Encodable version of [`u8`].
 pub enum U8 {}
 
-impl Encode for U8 {
+impl Encode<'_> for U8 {
     type Item = u8;
     type Error = Infallible;
 
@@ -33,7 +33,7 @@ impl Decode for U8 {
 /// Encodable version of [`i8`].
 pub enum I8 {}
 
-impl Encode for I8 {
+impl Encode<'_> for I8 {
     type Item = i8;
     type Error = Infallible;
 
@@ -63,7 +63,7 @@ macro_rules! define_type {
         #[doc = "`]."]
         pub struct $name<O>(PhantomData<O>);
 
-        impl<O: ByteOrder> Encode for $name<O> {
+        impl<O: ByteOrder> Encode<'_> for $name<O> {
             type Item = $native;
             type Error = Infallible;
 

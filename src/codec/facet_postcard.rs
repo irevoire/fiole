@@ -8,7 +8,7 @@ use crate::codec::{Decode, DecodingVec, Dirty, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetPostcard<T>(PhantomData<T>);
 
-impl<T: Facet<'static>> Encode for FacetPostcard<T> {
+impl<'a, T: Facet<'a>> Encode<'a> for FacetPostcard<T> {
     type Item = T;
     type Error = facet_postcard::SerializeError;
 

@@ -222,7 +222,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     }
 }
 
-impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
+impl<'a, Key: Encode<'a>, Value: Decode> Keyspace<Key, Value> {
     /// Retrieves an item from the snapshot.
     ///
     /// # Examples
@@ -253,7 +253,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     pub fn get(
         &self,
         rtxn: &impl Readable,
-        key: &Key::Item,
+        key: &'a Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
 
@@ -287,7 +287,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     pub fn take(
         &self,
         wtxn: &mut Wtxn,
-        key: &Key::Item,
+        key: &'a Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         match wtxn.inner.take(&self.inner, key).map_err(Error::Fjall)? {
@@ -299,13 +299,13 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     }
 }
 
-impl<Key: Encode, Value> Keyspace<Key, Value> {
+impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     /// A typed version of [`fjall::Readable::contains_key`], see the original documentation for more infos.
     #[inline]
     pub fn contains_key(
         &self,
         rtxn: &impl Readable,
-        key: &Key::Item,
+        key: &'a Key::Item,
     ) -> Result<bool, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner()
@@ -318,17 +318,17 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     pub fn size_of(
         &self,
         rtxn: &impl Readable,
-        key: &Key::Item,
+        key: &'a Key::Item,
     ) -> Result<Option<u32>, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner().size_of(&self.inner, key).map_err(Error::Fjall)
     }
 
     #[inline]
-    pub fn range<R: RangeBounds<Key::Item>>(
+    pub fn range<R: RangeBounds<Key::Item> + 'a>(
         &self,
         rtxn: &impl Readable,
-        range: R,
+        range: &'a R,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let start = match range.start_bound() {
             Bound::Included(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
@@ -349,7 +349,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     pub fn prefix(
         &self,
         rtxn: &impl Readable,
-        prefix: &Key::Item,
+        prefix: &'a Key::Item,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let prefix = Key::encode_alloc(prefix)?.finish();
 
@@ -377,14 +377,14 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     /// assert!(ks.is_empty(&wtxn).unwrap());
     /// ```
     #[inline]
-    pub fn remove(&self, wtxn: &mut Wtxn, key: &Key::Item) -> Result<(), Key::Error> {
+    pub fn remove(&self, wtxn: &mut Wtxn, key: &'a Key::Item) -> Result<(), Key::Error> {
         let key = Key::encode_alloc(key)?.finish();
         wtxn.inner.remove(&self.inner, key);
         Ok(())
     }
 }
 
-impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
+impl<'a, Key: Encode<'a>, Value: Encode<'a>> Keyspace<Key, Value> {
     /// Inserts a key-value pair into the keyspace.
     ///
     /// Keys may be up to 65536 bytes long, values up to 2^32 bytes.
@@ -409,8 +409,8 @@ impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
     pub fn insert(
         &self,
         wtxn: &mut Wtxn,
-        key: &Key::Item,
-        value: &Value::Item,
+        key: &'a Key::Item,
+        value: &'a Value::Item,
     ) -> Result<(), Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         let value = Value::encode_alloc(value).map_err(Error::Value)?.finish();

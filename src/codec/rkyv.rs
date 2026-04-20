@@ -18,9 +18,9 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Rkyv<T, E>(PhantomData<(T, E)>);
 
-impl<T, E> Encode for Rkyv<T, E>
+impl<'a, T, E> Encode<'a> for Rkyv<T, E>
 where
-    T: Archive + for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, E>>,
+    T: Archive + for<'b> Serialize<HighSerializer<AlignedVec, ArenaHandle<'b>, E>> + 'a,
     E: rancor::Source,
 {
     type Item = T;

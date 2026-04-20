@@ -5,7 +5,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a roaring bitmap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringBitmapCodec {}
 
-impl Encode for RoaringBitmapCodec {
+impl Encode<'_> for RoaringBitmapCodec {
     type Item = RoaringBitmap;
     type Error = std::io::Error;
 
@@ -31,7 +31,7 @@ impl Decode for RoaringBitmapCodec {
 /// Encode a roaring treemap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringTreemapCodec {}
 
-impl Encode for RoaringTreemapCodec {
+impl Encode<'_> for RoaringTreemapCodec {
     type Item = RoaringTreemap;
     type Error = std::io::Error;
 

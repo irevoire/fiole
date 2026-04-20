@@ -6,13 +6,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 pub struct SizedCodec<C>(PhantomData<C>);
 
-impl<C: Encode> Encode for SizedCodec<C> {
+impl<'a, C: Encode<'a>> Encode<'a> for SizedCodec<C> {
     type Item = C::Item;
     type Error = C::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'a Self::Item,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         let token = ret.save_space_for_later(std::mem::size_of::<u32>(), 0);

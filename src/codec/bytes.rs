@@ -6,7 +6,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub enum Bytes {}
 
-impl Encode for Bytes {
+impl Encode<'_> for Bytes {
     type Item = [u8];
     type Error = Infallible;
 

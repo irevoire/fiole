@@ -6,7 +6,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Str {}
 
-impl Encode for Str {
+impl Encode<'_> for Str {
     type Item = str;
     type Error = Infallible;
 

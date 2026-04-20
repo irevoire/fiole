@@ -8,7 +8,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetMsgpack<T>(PhantomData<T>);
 
-impl<T: Facet<'static>> Encode for FacetMsgpack<T> {
+impl<'a, T: Facet<'a>> Encode<'a> for FacetMsgpack<T> {
     type Item = T;
     type Error = std::io::Error;
 

@@ -24,16 +24,17 @@ impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
 }
 impl<C1: std::error::Error> std::error::Error for ComposeCodecError1<C1> {}
 
-impl<C1: Encode> Encode for ComposeCodec<(C1,)> {
-    type Item = (C1::Item,);
+impl<'a, C1: Encode<'a>> Encode<'a> for ComposeCodec<(C1,)> {
+    type Item = (&'a C1::Item,);
     type Error = ComposeCodecError1<C1::Error>;
 
     fn encode(
-        into: EncodingVec<Fresh>,
+        ret: EncodingVec<Fresh>,
         item: &Self::Item,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
-        let ret = into.edit();
-        let ret = C1::encode(ret.make_fresh(), &item.0).map_err(ComposeCodecError1::C1)?;
+        #[allow(nonstandard_style)]
+        let (C1,) = item;
+        let ret = C1::encode(ret, C1).map_err(ComposeCodecError1::C1)?;
         Ok(ret)
     }
 }
@@ -67,14 +68,13 @@ macro_rules! compose_impl {
         impl<$($C: std::error::Error),+> std::error::Error for $error_name<$($C),+> {}
 
 
-        impl<$($C),+> Encode for ComposeCodec<($($C),+)>
+        impl<'a, $($C),+> Encode<'a> for ComposeCodec<($($C),+)>
         where
           $(
-              $C: Encode,
-              $C::Item: Sized,
+              $C: Encode<'a>,
           )+
           {
-            type Item = ($($C::Item),+);
+            type Item = ($(&'a $C::Item),+);
             type Error = $error_name<$($C::Error),+>;
 
             fn encode(
@@ -126,17 +126,59 @@ seq!(N in 2..20 {
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{Bytes, ComposeCodec, Decode, Encode, Str, I8, U8};
+    use std::marker::PhantomData;
+
+    use crate::codec::{Bytes, ComposeCodec, Decode, Encode, SizedCodec, Str};
 
     #[test]
-    fn compose() {
+    fn compose_simple_test() {
         let letter = "ACAB";
         let number = [13, 12];
 
-        // type MyCodec = ComposeCodec<(Str, Bytes)>;
-        type MyCodec = ComposeCodec<(U8, I8)>;
-        let buf = MyCodec::encode_alloc(&(17, 12)).unwrap();
+        type MyCodec = ComposeCodec<(SizedCodec<Str>, Bytes)>;
+
+        let buf = MyCodec::encode_alloc(&(letter, &number)).unwrap();
         let decode = MyCodec::decode(&mut buf.into_decoding_vec()).unwrap();
-        assert_eq!(&decode, &(17, 12));
+        assert_eq!((letter.to_string(), number.to_vec()), (decode.0, decode.1));
+
+        type MyCodec2 = ComposeCodec<(SizedCodec<Bytes>, Str)>;
+
+        let buf = MyCodec2::encode_alloc(&(&number, &letter)).unwrap();
+        let decode = MyCodec2::decode(&mut buf.into_decoding_vec()).unwrap();
+        assert_eq!((number.to_vec(), letter.to_string()), (decode.0, decode.1));
+    }
+
+    #[test]
+    fn make_sure_all_tuple_size_support_encoding_and_decoding() {
+        struct Tester<'a, T: Encode<'a> + Decode>(PhantomData<&'a T>);
+
+        // let _ = Tester::<(crate::codec::DecodeIgnore,)>(PhantomData);
+        let _ = Tester::<ComposeCodec<(Str,)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(Str, Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(Str, Str, Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(Str, Str, Str, Str)>>(PhantomData);
+        let _ = Tester::<
+            ComposeCodec<(
+                Str, // 1
+                Str, // 2
+                Str, // 3
+                Str, // 4
+                Str, // 5
+                Str, // 6
+                Str, // 7
+                Str, // 8
+                Str, // 9
+                Str, // 10
+                Str, // 11
+                Str, // 12
+                Str, // 13
+                Str, // 14
+                Str, // 15
+                Str, // 16
+                Str, // 17
+                Str, // 18
+                Str, // 19
+            )>,
+        >(PhantomData);
     }
 }

@@ -11,7 +11,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ Take care of the flattened struct and untyped enum. In some cases, they serialize correctly but fail to deserialize.
 pub struct SerdeJson<T>(PhantomData<T>);
 
-impl<T: Serialize> Encode for SerdeJson<T> {
+impl<'a, T: Serialize + 'a> Encode<'a> for SerdeJson<T> {
     type Item = T;
     type Error = serde_json::Error;
 

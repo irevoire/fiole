@@ -7,7 +7,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct as [`msgpack`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
 
-impl<T: Serialize> Encode for SerdeMsgpack<T> {
+impl<'a, T: Serialize + 'a> Encode<'a> for SerdeMsgpack<T> {
     type Item = T;
     type Error = rmp_serde::encode::Error;
 
