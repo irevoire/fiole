@@ -76,8 +76,7 @@ mod test {
         let rkyv_deserialized =
             rkyv::from_bytes::<Example, rkyv::rancor::Panic>(&rkyv_bytes).unwrap();
 
-        let codec_bytes =
-            Rkyv::<Example, rkyv::rancor::Panic>::encode(EncodingVec::new(), &value).unwrap();
+        let codec_bytes = Rkyv::<Example, rkyv::rancor::Panic>::encode_alloc(&value).unwrap();
         assert_eq!(rkyv_bytes.as_slice(), codec_bytes.as_slice());
 
         let codec_deserialized =

@@ -54,7 +54,7 @@ mod test {
         let facet_bytes = facet_json::to_vec(&value).unwrap();
         let facet_deserialized = facet_json::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = FacetJson::<Example>::encode(EncodingVec::new(), &value).unwrap();
+        let codec_bytes = FacetJson::<Example>::encode_alloc(&value).unwrap();
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =

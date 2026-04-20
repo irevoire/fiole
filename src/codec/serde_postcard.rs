@@ -52,7 +52,7 @@ mod test {
         let facet_bytes = postcard::to_allocvec(&value).unwrap();
         let facet_deserialized = postcard::from_bytes(&facet_bytes).unwrap();
 
-        let codec_bytes = SerdePostcard::<Example>::encode(EncodingVec::new(), &value).unwrap();
+        let codec_bytes = SerdePostcard::<Example>::encode_alloc(&value).unwrap();
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =

@@ -68,7 +68,7 @@ mod test {
         let roaring_deserialized =
             RoaringBitmap::deserialize_from(&mut roaring_bytes.as_slice()).unwrap();
 
-        let codec_bytes = RoaringBitmapCodec::encode(EncodingVec::new(), &bitmap).unwrap();
+        let codec_bytes = RoaringBitmapCodec::encode_alloc(&bitmap).unwrap();
         assert_eq!(codec_bytes.as_slice(), roaring_bytes);
 
         let codec_deserialized =
@@ -86,7 +86,7 @@ mod test {
         let roaring_deserialized =
             RoaringTreemap::deserialize_from(&mut roaring_bytes.as_slice()).unwrap();
 
-        let codec_bytes = RoaringTreemapCodec::encode(EncodingVec::new(), &bitmap).unwrap();
+        let codec_bytes = RoaringTreemapCodec::encode_alloc(&bitmap).unwrap();
         assert_eq!(codec_bytes.as_slice(), roaring_bytes);
 
         let codec_deserialized =

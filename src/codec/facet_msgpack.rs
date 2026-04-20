@@ -53,7 +53,7 @@ mod test {
         let facet_bytes = facet_msgpack::to_vec(&value).unwrap();
         let facet_deserialized = facet_msgpack::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = FacetMsgpack::<Example>::encode(EncodingVec::new(), &value).unwrap();
+        let codec_bytes = FacetMsgpack::<Example>::encode_alloc(&value).unwrap();
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =

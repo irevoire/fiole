@@ -59,7 +59,7 @@ mod test {
         let facet_bytes = serde_json::to_vec(&value).unwrap();
         let facet_deserialized = serde_json::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = SerdeJson::<Example>::encode(EncodingVec::new(), &value).unwrap();
+        let codec_bytes = SerdeJson::<Example>::encode_alloc(&value).unwrap();
         assert_eq!(codec_bytes.as_slice(), facet_bytes);
 
         let codec_deserialized =

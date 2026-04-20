@@ -16,6 +16,7 @@ pub enum ComposeCodecError1<C1> {
 
 impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[allow(nonstandard_style)]
         match self {
             Self::C1(C1) => C1.fmt(f),
         }
