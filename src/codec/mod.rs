@@ -15,6 +15,8 @@ mod bytes;
 pub use bytes::*;
 mod sized_codec;
 pub use sized_codec::*;
+mod compose_codec;
+pub use compose_codec::*;
 mod lazy;
 pub use lazy::*;
 mod integer;
