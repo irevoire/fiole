@@ -126,9 +126,11 @@ seq!(N in 2..20 {
 
 #[cfg(test)]
 mod test {
-    use std::marker::PhantomData;
+    use std::{borrow::Cow, error::Error, marker::PhantomData};
 
-    use crate::codec::{Bytes, ComposeCodec, Decode, Encode, SizedCodec, Str};
+    use crate::codec::{
+        Bytes, ComposeCodec, Decode, DecodingVec, Encode, EncodingVec, Fresh, SizedCodec, Str,
+    };
 
     #[test]
     fn compose_simple_test() {
@@ -146,6 +148,91 @@ mod test {
         let buf = MyCodec2::encode_alloc(&(&number, &letter)).unwrap();
         let decode = MyCodec2::decode(&mut buf.into_decoding_vec()).unwrap();
         assert_eq!((number.to_vec(), letter.to_string()), (decode.0, decode.1));
+    }
+
+    #[test]
+    fn compose_used_inside_another_codec_simple_case() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct MyStruct {
+            s: String,
+            n: Vec<u8>,
+        }
+
+        impl Encode<'_> for MyStruct {
+            type Item = Self;
+            type Error = Box<dyn Error>;
+
+            fn encode(
+                into: EncodingVec<Fresh>,
+                item: &'_ Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
+                    .map_err(|err| Box::new(err) as Box<dyn Error>)
+            }
+        }
+
+        impl Decode for MyStruct {
+            type Item = Self;
+            type Error = Box<dyn Error>;
+
+            fn decode(bytes: &mut crate::codec::DecodingVec) -> Result<Self::Item, Self::Error> {
+                let (s, n) = ComposeCodec::<(SizedCodec<Str>, Bytes)>::decode(bytes)
+                    .map_err(|err| Box::new(err) as Box<dyn Error>)?;
+                Ok(Self { s, n })
+            }
+        }
+
+        let s = MyStruct {
+            s: String::from("ACAB"),
+            n: vec![13, 12],
+        };
+        let buf = MyStruct::encode_alloc(&s).unwrap();
+        let decode = MyStruct::decode(&mut buf.into_decoding_vec()).unwrap();
+        assert_eq!(s, decode);
+    }
+
+    #[test]
+    fn compose_used_inside_another_codec_with_lifetime() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct MyStruct<'s, 'n> {
+            s: Cow<'s, str>,
+            n: Cow<'n, [u8]>,
+        }
+
+        impl<'a> Encode<'a> for MyStruct<'a, 'a> {
+            type Item = Self;
+            type Error = Box<dyn Error>;
+
+            fn encode(
+                into: EncodingVec<Fresh>,
+                item: &'_ Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
+                    .map_err(|err| Box::new(err) as Box<dyn Error>)
+            }
+        }
+
+        impl Decode for MyStruct<'static, 'static> {
+            type Item = Self;
+            type Error = Box<dyn Error>;
+
+            fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+                let (s, n) = ComposeCodec::<(SizedCodec<Str>, Bytes)>::decode(bytes)
+                    .map_err(|err| Box::new(err) as Box<dyn Error>)?;
+                Ok(Self {
+                    s: Cow::Owned(s),
+                    n: Cow::Owned(n),
+                })
+            }
+        }
+
+        let s = MyStruct {
+            s: Cow::Borrowed("ACAB"),
+            n: Cow::Owned(vec![13, 12]),
+        };
+        let buf = MyStruct::encode_alloc(&s).unwrap();
+        let decode = MyStruct::decode(&mut buf.into_decoding_vec()).unwrap();
+        assert_eq!(s, decode);
     }
 
     #[test]
