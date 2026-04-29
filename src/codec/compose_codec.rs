@@ -154,8 +154,19 @@ mod test {
     use std::{borrow::Cow, error::Error, marker::PhantomData};
 
     use crate::codec::{
-        Bytes, ComposeCodec, Decode, DecodingVec, Encode, EncodingVec, Fresh, SizedCodec, Str,
+        Bytes, ComposeCodec, ComposeCodecError2, Decode, DecodingVec, Encode, EncodingVec, Fresh,
+        SizedCodec, Str, U8,
     };
+
+    fn encode_compose_u8_value<'b, Value>(
+        encoding: EncodingVec<Fresh>,
+        key: &'b (&u8, &Value::Item),
+    ) -> Result<EncodingVec<Fresh>, ComposeCodecError2<<U8 as Encode<'b>>::Error, Value::Error>>
+    where
+        Value: Encode<'b>,
+    {
+        ComposeCodec::<(U8, Value)>::encode(encoding, key)
+    }
 
     #[test]
     fn compose_simple_test() {
@@ -258,6 +269,61 @@ mod test {
         let buf = MyStruct::encode_alloc(&s).unwrap();
         let decode = MyStruct::decode(&mut buf.into_decoding_vec()).unwrap();
         assert_eq!(s, decode);
+    }
+
+    #[test]
+    fn compose_used_inside_another_codec_that_contains_yet_another_codec_with_lifetime() {
+        #[derive(PartialEq, Eq)]
+        struct MyStruct<Value> {
+            level: u8,
+            value: Value,
+        }
+
+        struct MyCodec<'a, Value>(PhantomData<(&'a (), Value)>);
+
+        impl<'a, Value> Encode<'a> for MyCodec<'a, Value>
+        where
+            Value: for<'b> Encode<'b>,
+            <Value as Encode<'a>>::Item: Sized + ToOwned,
+        {
+            type Item = MyStruct<<Value as Encode<'a>>::Item>;
+            type Error = <Value as Encode<'a>>::Error;
+
+            fn encode(
+                encoding: EncodingVec<Fresh>,
+                item: &Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                let key = (&item.level, &item.value);
+
+                match ComposeCodec::<(U8, Value)>::encode(encoding, &key) {
+                    Err(ComposeCodecError2::C0(_)) => unreachable!(),
+                    Err(ComposeCodecError2::C1(err)) => Err(err),
+                    Ok(ret) => Ok(ret),
+                }
+            }
+        }
+
+        impl<Value> Decode for MyCodec<'static, Value>
+        where
+            Value: Decode,
+            Value::Item: 'static + Sized + Clone,
+        {
+            type Item = MyStruct<<Value as Decode>::Item>;
+            type Error = ComposeCodecError2<<U8 as Decode>::Error, <Value as Decode>::Error>;
+
+            fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+                let (level, value) = ComposeCodec::<(U8, Value)>::decode(bytes)?;
+                Ok(MyStruct { level, value })
+            }
+        }
+
+        let s = MyStruct::<u8> {
+            level: 0,
+            value: 0u8,
+        };
+        let buf = MyCodec::<U8>::encode_alloc(&s).unwrap();
+        let decode = MyCodec::<U8>::decode(&mut buf.into_decoding_vec()).unwrap();
+        assert!(s == decode);
     }
 
     #[test]

@@ -14,11 +14,11 @@ pub trait Encode<'a> {
     /// Encode the given item into the specified `EncodingVec`.
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &'a Self::Item,
+        item: &Self::Item,
     ) -> Result<EncodingVec<Fresh>, Self::Error>;
 
     /// Encode the given item as bytes in an allocated `EncodingVec`
-    fn encode_alloc(item: &'a Self::Item) -> Result<EncodingVec<Fresh>, Self::Error> {
+    fn encode_alloc(item: &Self::Item) -> Result<EncodingVec<Fresh>, Self::Error> {
         Self::encode(EncodingVec::new(), item)
     }
 }
