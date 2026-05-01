@@ -14,6 +14,17 @@ pub enum ComposeCodecError1<C1> {
     C1(C1),
 }
 
+impl<C1> ComposeCodecError1<C1> {
+    pub fn unwrap_error_1(self) -> C1 {
+        #[allow(nonstandard_style)]
+        match self {
+            Self::C1(C1) => C1,
+            #[allow(unused)]
+            _other => panic!("Unwrapped the wrong variant"),
+        }
+    }
+}
+
 impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         #[allow(nonstandard_style)]
@@ -55,6 +66,20 @@ macro_rules! compose_impl {
         #[derive(Debug)]
         pub enum $error_name<$($C),+> {
             $($C($C)),+
+        }
+
+        paste! {
+        impl<$($C),+> $error_name<$($C),+> {
+            $(
+                #[allow(nonstandard_style)]
+                pub fn [<unwrap_ $C>](self) -> $C {
+                    match self {
+                        Self::$C($C) => $C,
+                        _other => panic!("Unwrapped the wrong variant"),
+                    }
+                }
+            )+
+        }
         }
 
         impl<$($C: fmt::Display),+> fmt::Display for $error_name<$($C),+> {
@@ -107,7 +132,7 @@ macro_rules! compose_impl {
     };
     ($N:literal) => {
         paste! {
-        seq!{M in 0..$N {
+        seq!{M in 1..=$N {
             compose_impl! {
                 [<ComposeCodecError $N>]
                     => #(C~M)*
