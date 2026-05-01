@@ -9,12 +9,12 @@ use crate::codec::{Decode, DecodingVec, Dirty, Encode, EncodingVec, Fresh};
 pub struct FacetPostcard<T>(PhantomData<T>);
 
 impl<'a, T: Facet<'a>> Encode<'a> for FacetPostcard<T> {
-    type Item = T;
+    type Item<'b> = T;
     type Error = facet_postcard::SerializeError;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         facet_postcard::to_writer_fallible(item, &mut ret)?;

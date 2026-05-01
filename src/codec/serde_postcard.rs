@@ -8,12 +8,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub struct SerdePostcard<T>(PhantomData<T>);
 
 impl<'a, T: Serialize + 'a> Encode<'a> for SerdePostcard<T> {
-    type Item = T;
+    type Item<'b> = T;
     type Error = postcard::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         postcard::to_io(item, &mut ret)?;

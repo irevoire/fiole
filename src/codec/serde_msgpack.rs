@@ -8,12 +8,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub struct SerdeMsgpack<T>(PhantomData<T>);
 
 impl<'a, T: Serialize + 'a> Encode<'a> for SerdeMsgpack<T> {
-    type Item = T;
+    type Item<'b> = T;
     type Error = rmp_serde::encode::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         rmp_serde::encode::write(&mut ret, item)?;

@@ -8,12 +8,12 @@ use std::marker::PhantomData;
 pub enum U8 {}
 
 impl Encode<'_> for U8 {
-    type Item = u8;
+    type Item<'b> = u8;
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         ret.push(*item);
@@ -34,12 +34,12 @@ impl Decode for U8 {
 pub enum I8 {}
 
 impl Encode<'_> for I8 {
-    type Item = i8;
+    type Item<'b> = i8;
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         ret.push(*item as u8);
@@ -64,15 +64,15 @@ macro_rules! define_type {
         pub struct $name<O>(PhantomData<O>);
 
         impl<O: ByteOrder> Encode<'_> for $name<O> {
-            type Item = $native;
+            type Item<'b> = $native;
             type Error = Infallible;
 
             fn encode(
                 into: EncodingVec<Fresh>,
-                item: &Self::Item,
+                item: &Self::Item<'b>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 let mut ret = into.edit();
-                let mut buf = [0; size_of::<Self::Item>()];
+                let mut buf = [0; size_of::<Self::Item<'b>>()];
                 O::$write_method(&mut buf, *item);
                 ret.extend(&buf);
                 Ok(ret.make_fresh())

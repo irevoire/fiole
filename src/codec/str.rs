@@ -6,13 +6,16 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Str {}
 
-impl Encode<'_> for Str {
-    type Item = str;
+impl<'a> Encode<'a> for Str {
+    type Item<'b>
+        = str
+    where
+        'b: 'a;
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         ret.extend(item.as_bytes());

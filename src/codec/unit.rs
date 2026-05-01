@@ -7,12 +7,12 @@ use std::error::Error as StdError;
 pub struct Unit {}
 
 impl Encode<'_> for Unit {
-    type Item = ();
+    type Item<'b> = ();
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        _item: &Self::Item,
+        _item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         Ok(into)
     }

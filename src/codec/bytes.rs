@@ -7,12 +7,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub enum Bytes {}
 
 impl Encode<'_> for Bytes {
-    type Item = [u8];
+    type Item<'b> = [u8];
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'_>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         ret.extend(item);

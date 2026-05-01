@@ -10,12 +10,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub struct FacetJson<T>(PhantomData<T>);
 
 impl<'a, T: Facet<'a>> Encode<'a> for FacetJson<T> {
-    type Item = T;
+    type Item<'b> = T;
     type Error = std::io::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         facet_json::to_writer_std(&mut ret, item)?;

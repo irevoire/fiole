@@ -12,12 +12,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub struct SerdeJson<T>(PhantomData<T>);
 
 impl<'a, T: Serialize + 'a> Encode<'a> for SerdeJson<T> {
-    type Item = T;
+    type Item<'b> = T;
     type Error = serde_json::Error;
 
-    fn encode(
+    fn encode<'b>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         serde_json::to_writer(&mut ret, item)?;

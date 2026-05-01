@@ -36,12 +36,12 @@ impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
 impl<C1: std::error::Error> std::error::Error for ComposeCodecError1<C1> {}
 
 impl<'a, C1: Encode<'a>> Encode<'a> for ComposeCodec<(C1,)> {
-    type Item = (&'a C1::Item,);
+    type Item<'b> = (&'b C1::Item<'b>,);
     type Error = ComposeCodecError1<C1::Error>;
 
-    fn encode(
+    fn encode<'b>(
         ret: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'b Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         #[allow(nonstandard_style)]
         let (C1,) = item;
@@ -99,12 +99,12 @@ macro_rules! compose_impl {
               $C: Encode<'a>,
           )+
           {
-            type Item = ($(&'a $C::Item),+);
+            type Item<'b> = ($(&'b $C::Item<'b>),+);
             type Error = $error_name<$($C::Error),+>;
 
-            fn encode(
+            fn encode<'b>(
                 ret: EncodingVec<Fresh>,
-                item: &Self::Item,
+                item: &'b Self::Item<'b>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
             	#[allow(nonstandard_style)]
             	let ($($C,)+) = item;
@@ -195,12 +195,12 @@ mod test {
         }
 
         impl Encode<'_> for MyStruct {
-            type Item = Self;
+            type Item<'b> = Self;
             type Error = Box<dyn Error>;
 
-            fn encode(
+            fn encode<'b>(
                 into: EncodingVec<Fresh>,
-                item: &'_ Self::Item,
+                item: &'_ Self::Item<'b>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)
@@ -236,12 +236,12 @@ mod test {
         }
 
         impl<'a> Encode<'a> for MyStruct<'a, 'a> {
-            type Item = Self;
+            type Item<'b> = MyStruct<'b, 'b>;
             type Error = Box<dyn Error>;
 
             fn encode(
                 into: EncodingVec<Fresh>,
-                item: &'_ Self::Item,
+                item: &'_ Self::Item<'b>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)

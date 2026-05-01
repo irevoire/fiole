@@ -23,12 +23,12 @@ where
     T: Archive + for<'b> Serialize<HighSerializer<AlignedVec, ArenaHandle<'b>, E>> + 'a,
     E: rancor::Source,
 {
-    type Item = T;
+    type Item<'b> = T;
     type Error = E;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         // TODO: Get rid of this useless alloc

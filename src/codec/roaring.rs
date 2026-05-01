@@ -6,12 +6,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub enum RoaringBitmapCodec {}
 
 impl Encode<'_> for RoaringBitmapCodec {
-    type Item = RoaringBitmap;
+    type Item<'b> = RoaringBitmap;
     type Error = std::io::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         item.serialize_into(&mut ret)?;
@@ -37,7 +37,7 @@ impl Encode<'_> for RoaringTreemapCodec {
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         item.serialize_into(&mut ret)?;

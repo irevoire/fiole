@@ -9,12 +9,15 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 pub struct FacetMsgpack<T>(PhantomData<T>);
 
 impl<'a, T: Facet<'a>> Encode<'a> for FacetMsgpack<T> {
-    type Item = T;
+    type Item<'b>
+        = T
+    where
+        'a: 'b;
     type Error = std::io::Error;
 
-    fn encode(
+    fn encode<'b>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'b Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         facet_msgpack::to_writer(&mut ret, item)?;

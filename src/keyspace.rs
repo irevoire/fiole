@@ -253,7 +253,7 @@ impl<'a, Key: Encode<'a>, Value: Decode> Keyspace<Key, Value> {
     pub fn get(
         &self,
         rtxn: &impl Readable,
-        key: &'a Key::Item,
+        key: &'a Key::Item<'b>,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
 
@@ -287,7 +287,7 @@ impl<'a, Key: Encode<'a>, Value: Decode> Keyspace<Key, Value> {
     pub fn take(
         &self,
         wtxn: &mut Wtxn,
-        key: &'a Key::Item,
+        key: &'a Key::Item<'b>,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         match wtxn.inner.take(&self.inner, key).map_err(Error::Fjall)? {
@@ -305,7 +305,7 @@ impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     pub fn contains_key(
         &self,
         rtxn: &impl Readable,
-        key: &'a Key::Item,
+        key: &'a Key::Item<'b>,
     ) -> Result<bool, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner()
@@ -318,14 +318,14 @@ impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     pub fn size_of(
         &self,
         rtxn: &impl Readable,
-        key: &'a Key::Item,
+        key: &'a Key::Item<'b>,
     ) -> Result<Option<u32>, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         rtxn.inner().size_of(&self.inner, key).map_err(Error::Fjall)
     }
 
     #[inline]
-    pub fn range<R: RangeBounds<Key::Item> + 'a>(
+    pub fn range<R: RangeBounds<Key::Item<'b>> + 'a>(
         &self,
         rtxn: &impl Readable,
         range: &'a R,
@@ -349,7 +349,7 @@ impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     pub fn prefix(
         &self,
         rtxn: &impl Readable,
-        prefix: &'a Key::Item,
+        prefix: &'a Key::Item<'b>,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let prefix = Key::encode_alloc(prefix)?.finish();
 
@@ -377,7 +377,7 @@ impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     /// assert!(ks.is_empty(&wtxn).unwrap());
     /// ```
     #[inline]
-    pub fn remove(&self, wtxn: &mut Wtxn, key: &'a Key::Item) -> Result<(), Key::Error> {
+    pub fn remove(&self, wtxn: &mut Wtxn, key: &'a Key::Item<'b>) -> Result<(), Key::Error> {
         let key = Key::encode_alloc(key)?.finish();
         wtxn.inner.remove(&self.inner, key);
         Ok(())
@@ -409,8 +409,8 @@ impl<'a, Key: Encode<'a>, Value: Encode<'a>> Keyspace<Key, Value> {
     pub fn insert(
         &self,
         wtxn: &mut Wtxn,
-        key: &'a Key::Item,
-        value: &'a Value::Item,
+        key: &'a Key::Item<'b>,
+        value: &'a Value::Item<'b>,
     ) -> Result<(), Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         let value = Value::encode_alloc(value).map_err(Error::Value)?.finish();
