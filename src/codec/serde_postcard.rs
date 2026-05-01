@@ -7,8 +7,8 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct as [`postcard`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdePostcard<T>(PhantomData<T>);
 
-impl<'a, T: Serialize + 'a> Encode<'a> for SerdePostcard<T> {
-    type Item = T;
+impl<'a, T: Serialize + 'a> Encode for SerdePostcard<T> {
+    type Item<'a> = T;
     type Error = postcard::Error;
 
     fn encode(

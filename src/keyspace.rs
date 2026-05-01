@@ -222,7 +222,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     }
 }
 
-impl<'a, Key: Encode<'a>, Value: Decode> Keyspace<Key, Value> {
+impl<'a, Key: Encode, Value: Decode> Keyspace<Key, Value> {
     /// Retrieves an item from the snapshot.
     ///
     /// # Examples
@@ -299,7 +299,7 @@ impl<'a, Key: Encode<'a>, Value: Decode> Keyspace<Key, Value> {
     }
 }
 
-impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
+impl<'a, Key: Encode, Value> Keyspace<Key, Value> {
     /// A typed version of [`fjall::Readable::contains_key`], see the original documentation for more infos.
     #[inline]
     pub fn contains_key(
@@ -384,7 +384,7 @@ impl<'a, Key: Encode<'a>, Value> Keyspace<Key, Value> {
     }
 }
 
-impl<'a, Key: Encode<'a>, Value: Encode<'a>> Keyspace<Key, Value> {
+impl<'a, Key: Encode, Value: Encode> Keyspace<Key, Value> {
     /// Inserts a key-value pair into the keyspace.
     ///
     /// Keys may be up to 65536 bytes long, values up to 2^32 bytes.

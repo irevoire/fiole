@@ -5,13 +5,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a roaring bitmap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringBitmapCodec {}
 
-impl Encode<'_> for RoaringBitmapCodec {
-    type Item = RoaringBitmap;
+impl Encode for RoaringBitmapCodec {
+    type Item<'a> = RoaringBitmap;
     type Error = std::io::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'_>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         item.serialize_into(&mut ret)?;
@@ -31,13 +31,13 @@ impl Decode for RoaringBitmapCodec {
 /// Encode a roaring treemap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringTreemapCodec {}
 
-impl Encode<'_> for RoaringTreemapCodec {
-    type Item = RoaringTreemap;
+impl Encode for RoaringTreemapCodec {
+    type Item<'a> = RoaringTreemap;
     type Error = std::io::Error;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'_>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         item.serialize_into(&mut ret)?;

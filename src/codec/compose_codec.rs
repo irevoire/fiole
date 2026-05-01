@@ -35,13 +35,13 @@ impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
 }
 impl<C1: std::error::Error> std::error::Error for ComposeCodecError1<C1> {}
 
-impl<'a, C1: Encode<'a>> Encode<'a> for ComposeCodec<(C1,)> {
-    type Item = (&'a C1::Item,);
+impl<C1: Encode> Encode for ComposeCodec<(C1,)> {
+    type Item<'a> = (&'a C1::Item<'a>,);
     type Error = ComposeCodecError1<C1::Error>;
 
-    fn encode(
+    fn encode<'a>(
         ret: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'a Self::Item<'a>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         #[allow(nonstandard_style)]
         let (C1,) = item;
@@ -93,18 +93,13 @@ macro_rules! compose_impl {
         impl<$($C: std::error::Error),+> std::error::Error for $error_name<$($C),+> {}
 
 
-        impl<'a, $($C),+> Encode<'a> for ComposeCodec<($($C),+)>
-        where
-          $(
-              $C: Encode<'a>,
-          )+
-          {
-            type Item = ($(&'a $C::Item),+);
+        impl<$($C: Encode),+> Encode for ComposeCodec<($($C),+)> {
+            type Item<'a> = ($(&'a $C::Item<'a>),+);
             type Error = $error_name<$($C::Error),+>;
 
-            fn encode(
+            fn encode<'a>(
                 ret: EncodingVec<Fresh>,
-                item: &Self::Item,
+                item: &'a Self::Item<'a>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
             	#[allow(nonstandard_style)]
             	let ($($C,)+) = item;
@@ -145,9 +140,9 @@ macro_rules! compose_impl {
 use paste::paste;
 use seq_macro::seq;
 
-seq!(N in 2..20 {
+/* seq!(N in 2..20 {
         compose_impl!(N);
-});
+}); */
 
 #[cfg(test)]
 mod test {
@@ -194,13 +189,13 @@ mod test {
             n: Vec<u8>,
         }
 
-        impl Encode<'_> for MyStruct {
-            type Item = Self;
+        impl Encode for MyStruct {
+            type Item<'a> = Self;
             type Error = Box<dyn Error>;
 
             fn encode(
                 into: EncodingVec<Fresh>,
-                item: &'_ Self::Item,
+                item: &'_ Self::Item<'_>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)
@@ -235,13 +230,13 @@ mod test {
             n: Cow<'n, [u8]>,
         }
 
-        impl<'a> Encode<'a> for MyStruct<'a, 'a> {
-            type Item = Self;
+        impl Encode for MyStruct<'_, '_> {
+            type Item<'a> = MyStruct<'a, 'a>;
             type Error = Box<dyn Error>;
 
-            fn encode(
+            fn encode<'a>(
                 into: EncodingVec<Fresh>,
-                item: &'_ Self::Item,
+                item: &'a Self::Item<'a>,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)
@@ -328,7 +323,7 @@ mod test {
 
     #[test]
     fn make_sure_all_tuple_size_support_encoding_and_decoding() {
-        struct Tester<'a, T: Encode<'a> + Decode>(PhantomData<&'a T>);
+        struct Tester<'a, T: Encode + Decode>(PhantomData<&'a T>);
 
         // let _ = Tester::<(crate::codec::DecodeIgnore,)>(PhantomData);
         let _ = Tester::<ComposeCodec<(Str,)>>(PhantomData);

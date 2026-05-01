@@ -6,13 +6,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub enum Bytes {}
 
-impl Encode<'_> for Bytes {
-    type Item = [u8];
+impl Encode for Bytes {
+    type Item<'a> = [u8];
     type Error = Infallible;
 
-    fn encode(
+    fn encode<'a>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'a Self::Item<'a>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         ret.extend(item);

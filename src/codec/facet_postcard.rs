@@ -8,13 +8,13 @@ use crate::codec::{Decode, DecodingVec, Dirty, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetPostcard<T>(PhantomData<T>);
 
-impl<'a, T: Facet<'a>> Encode<'a> for FacetPostcard<T> {
-    type Item = T;
+impl<T: for<'a> Facet<'a>> Encode for FacetPostcard<T> {
+    type Item<'a> = T;
     type Error = facet_postcard::SerializeError;
 
-    fn encode(
+    fn encode<'a>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'a Self::Item<'a>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         facet_postcard::to_writer_fallible(item, &mut ret)?;

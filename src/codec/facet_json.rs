@@ -9,13 +9,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetJson<T>(PhantomData<T>);
 
-impl<'a, T: Facet<'a>> Encode<'a> for FacetJson<T> {
-    type Item = T;
+impl<T: for<'a> Facet<'a>> Encode for FacetJson<T> {
+    type Item<'b> = T;
     type Error = std::io::Error;
 
-    fn encode(
+    fn encode<'b>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &'b Self::Item<'b>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         facet_json::to_writer_std(&mut ret, item)?;

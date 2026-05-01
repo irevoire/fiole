@@ -7,7 +7,7 @@ pub use encoding::*;
 mod decoding;
 pub use decoding::*;
 
-mod bytes;
+/* mod bytes;
 pub use bytes::*;
 mod sized_codec;
 pub use sized_codec::*;
@@ -33,12 +33,12 @@ pub use facet_postcard::*;
 #[cfg(feature = "facet_msgpack")]
 mod facet_msgpack;
 #[cfg(feature = "facet_msgpack")]
-pub use facet_msgpack::*;
+pub use facet_msgpack::*; */
 #[cfg(feature = "serde_json")]
 mod serde_json;
 #[cfg(feature = "serde_json")]
 pub use serde_json::*;
-#[cfg(feature = "serde_postcard")]
+/* #[cfg(feature = "serde_postcard")]
 mod serde_postcard;
 #[cfg(feature = "serde_postcard")]
 pub use serde_postcard::*;
@@ -53,7 +53,7 @@ pub use roaring::*;
 #[cfg(feature = "rkyv")]
 mod rkyv;
 #[cfg(feature = "rkyv")]
-pub use rkyv::*;
+pub use rkyv::*; */
 
 /// Dummy codec if you don't know yet which codec will be used
 pub enum Unspecified {}

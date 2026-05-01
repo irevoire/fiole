@@ -6,13 +6,13 @@ use std::error::Error as StdError;
 /// Describe the unit type. Fail to decode if the bytes contains anything. See [`super::DecodeIgnore`] for that purpose.
 pub struct Unit {}
 
-impl Encode<'_> for Unit {
-    type Item = ();
+impl Encode for Unit {
+    type Item<'a> = ();
     type Error = Infallible;
 
     fn encode(
         into: EncodingVec<Fresh>,
-        _item: &Self::Item,
+        _item: &Self::Item<'_>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         Ok(into)
     }

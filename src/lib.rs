@@ -3,7 +3,7 @@
 use std::{convert::Infallible, marker::PhantomData};
 
 pub mod codec;
-mod database;
+/* mod database;
 mod error;
 mod keyspace;
 pub(crate) mod txn;
@@ -12,7 +12,7 @@ pub use database::Database;
 pub use error::Error;
 pub use fjall::KeyspaceCreateOptions;
 pub use keyspace::Keyspace;
-pub use txn::{Readable, Rtxn, Wtxn};
+pub use txn::{Readable, Rtxn, Wtxn}; */
 
 pub use byteorder;
 

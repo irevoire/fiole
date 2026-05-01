@@ -7,13 +7,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct as [`msgpack`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
 
-impl<'a, T: Serialize + 'a> Encode<'a> for SerdeMsgpack<T> {
-    type Item = T;
+impl<T: Serialize + 'static> Encode for SerdeMsgpack<T> {
+    type Item<'a> = T;
     type Error = rmp_serde::encode::Error;
 
-    fn encode(
+    fn encode<'a>(
         into: EncodingVec<Fresh>,
-        item: &Self::Item,
+        item: &Self::Item<'a>,
     ) -> Result<EncodingVec<Fresh>, Self::Error> {
         let mut ret = into.edit();
         rmp_serde::encode::write(&mut ret, item)?;
