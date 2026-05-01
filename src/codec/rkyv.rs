@@ -18,9 +18,9 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct Rkyv<T, E>(PhantomData<(T, E)>);
 
-impl<'a, T, E> Encode<'a> for Rkyv<T, E>
+impl<T, E> Encode for Rkyv<T, E>
 where
-    T: Archive + for<'b> Serialize<HighSerializer<AlignedVec, ArenaHandle<'b>, E>> + 'a,
+    T: Archive + for<'b> Serialize<HighSerializer<AlignedVec, ArenaHandle<'b>, E>>,
     E: rancor::Source,
 {
     type Item = T;
@@ -57,7 +57,7 @@ where
 mod test {
     use rkyv::{Archive, Deserialize, Serialize};
 
-    use crate::codec::{Decode, Encode, EncodingVec, Rkyv};
+    use crate::codec::{Decode, Encode, Rkyv};
 
     #[test]
     fn encode_and_decode() {
@@ -76,12 +76,13 @@ mod test {
         let rkyv_deserialized =
             rkyv::from_bytes::<Example, rkyv::rancor::Panic>(&rkyv_bytes).unwrap();
 
-        let codec_bytes = Rkyv::<Example, rkyv::rancor::Panic>::encode_alloc(&value).unwrap();
-        assert_eq!(rkyv_bytes.as_slice(), codec_bytes.as_slice());
+        let codec_bytes = Rkyv::<Example, rkyv::rancor::Panic>::encode_alloc(&value)
+            .unwrap()
+            .into_fjall_slice();
+        assert_eq!(rkyv_bytes.as_slice(), &codec_bytes as &[u8]);
 
         let codec_deserialized =
-            Rkyv::<Example, rkyv::rancor::Panic>::decode(&mut codec_bytes.into_decoding_vec())
-                .unwrap();
+            Rkyv::<Example, rkyv::rancor::Panic>::decode(&mut codec_bytes.into()).unwrap();
         assert_eq!(codec_deserialized, rkyv_deserialized);
         assert_eq!(codec_deserialized, value);
     }

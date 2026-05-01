@@ -6,7 +6,7 @@ use std::error::Error as StdError;
 /// Describe the unit type. Fail to decode if the bytes contains anything. See [`super::DecodeIgnore`] for that purpose.
 pub struct Unit {}
 
-impl Encode<'_> for Unit {
+impl Encode for Unit {
     type Item = ();
     type Error = Infallible;
 

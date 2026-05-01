@@ -35,8 +35,11 @@ impl<C1: fmt::Display> fmt::Display for ComposeCodecError1<C1> {
 }
 impl<C1: std::error::Error> std::error::Error for ComposeCodecError1<C1> {}
 
-impl<'a, C1: Encode<'a>> Encode<'a> for ComposeCodec<(C1,)> {
-    type Item = (&'a C1::Item,);
+impl<C1> Encode for ComposeCodec<(C1,)>
+where
+    C1: Encode,
+{
+    type Item = (C1::Item,);
     type Error = ComposeCodecError1<C1::Error>;
 
     fn encode(
@@ -93,13 +96,14 @@ macro_rules! compose_impl {
         impl<$($C: std::error::Error),+> std::error::Error for $error_name<$($C),+> {}
 
 
-        impl<'a, $($C),+> Encode<'a> for ComposeCodec<($($C),+)>
+        impl<$($C),+> Encode for ComposeCodec<($($C),+)>
         where
           $(
-              $C: Encode<'a>,
+              $C: Encode,
+              $C::Item: Sized,
           )+
           {
-            type Item = ($(&'a $C::Item),+);
+            type Item = ($($C::Item),+);
             type Error = $error_name<$($C::Error),+>;
 
             fn encode(
@@ -158,28 +162,18 @@ mod test {
         SizedCodec, Str, U8,
     };
 
-    fn encode_compose_u8_value<'b, Value>(
-        encoding: EncodingVec<Fresh>,
-        key: &'b (&u8, &Value::Item),
-    ) -> Result<EncodingVec<Fresh>, ComposeCodecError2<<U8 as Encode<'b>>::Error, Value::Error>>
-    where
-        Value: Encode<'b>,
-    {
-        ComposeCodec::<(U8, Value)>::encode(encoding, key)
-    }
-
     #[test]
     fn compose_simple_test() {
         let letter = "ACAB";
         let number = [13, 12];
 
-        type MyCodec = ComposeCodec<(SizedCodec<Str>, Bytes)>;
+        type MyCodec<'a> = ComposeCodec<(&'a SizedCodec<Str>, &'a Bytes)>;
 
         let buf = MyCodec::encode_alloc(&(letter, &number)).unwrap();
         let decode = MyCodec::decode(&mut buf.into_decoding_vec()).unwrap();
         assert_eq!((letter.to_string(), number.to_vec()), (decode.0, decode.1));
 
-        type MyCodec2 = ComposeCodec<(SizedCodec<Bytes>, Str)>;
+        type MyCodec2<'a> = ComposeCodec<(&'a SizedCodec<Bytes>, &'a Str)>;
 
         let buf = MyCodec2::encode_alloc(&(&number, &letter)).unwrap();
         let decode = MyCodec2::decode(&mut buf.into_decoding_vec()).unwrap();
@@ -194,15 +188,15 @@ mod test {
             n: Vec<u8>,
         }
 
-        impl Encode<'_> for MyStruct {
+        impl Encode for MyStruct {
             type Item = Self;
             type Error = Box<dyn Error>;
 
             fn encode(
                 into: EncodingVec<Fresh>,
-                item: &'_ Self::Item,
+                item: &Self::Item,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
-                ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
+                ComposeCodec::<(&SizedCodec<Str>, &Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)
             }
         }
@@ -235,7 +229,7 @@ mod test {
             n: Cow<'n, [u8]>,
         }
 
-        impl<'a> Encode<'a> for MyStruct<'a, 'a> {
+        impl<'a> Encode for MyStruct<'a, 'a> {
             type Item = Self;
             type Error = Box<dyn Error>;
 
@@ -243,7 +237,7 @@ mod test {
                 into: EncodingVec<Fresh>,
                 item: &'_ Self::Item,
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
-                ComposeCodec::<(SizedCodec<Str>, Bytes)>::encode(into, &(&item.s, &item.n))
+                ComposeCodec::<(&SizedCodec<Str>, &Bytes)>::encode(into, &(&item.s, &item.n))
                     .map_err(|err| Box::new(err) as Box<dyn Error>)
             }
         }
@@ -281,13 +275,13 @@ mod test {
 
         struct MyCodec<'a, Value>(PhantomData<(&'a (), Value)>);
 
-        impl<'a, Value> Encode<'a> for MyCodec<'a, Value>
+        impl<'a, Value> Encode for MyCodec<'a, Value>
         where
-            Value: for<'b> Encode<'b>,
-            <Value as Encode<'a>>::Item: Sized + ToOwned,
+            Value: Encode,
+            <Value as Encode>::Item: Sized + ToOwned,
         {
-            type Item = MyStruct<<Value as Encode<'a>>::Item>;
-            type Error = <Value as Encode<'a>>::Error;
+            type Item = MyStruct<<Value as Encode>::Item>;
+            type Error = <Value as Encode>::Error;
 
             fn encode(
                 encoding: EncodingVec<Fresh>,
@@ -295,9 +289,9 @@ mod test {
             ) -> Result<EncodingVec<Fresh>, Self::Error> {
                 let key = (&item.level, &item.value);
 
-                match ComposeCodec::<(U8, Value)>::encode(encoding, &key) {
-                    Err(ComposeCodecError2::C0(_)) => unreachable!(),
-                    Err(ComposeCodecError2::C1(err)) => Err(err),
+                match ComposeCodec::<(&U8, &Value)>::encode(encoding, &key) {
+                    Err(ComposeCodecError2::C1(_)) => unreachable!(),
+                    Err(ComposeCodecError2::C2(err)) => Err(err),
                     Ok(ret) => Ok(ret),
                 }
             }
@@ -328,34 +322,34 @@ mod test {
 
     #[test]
     fn make_sure_all_tuple_size_support_encoding_and_decoding() {
-        struct Tester<'a, T: Encode<'a> + Decode>(PhantomData<&'a T>);
+        struct Tester<T: Encode + Decode>(PhantomData<T>);
 
         // let _ = Tester::<(crate::codec::DecodeIgnore,)>(PhantomData);
-        let _ = Tester::<ComposeCodec<(Str,)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(Str, Str)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(Str, Str, Str)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(Str, Str, Str, Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&Str,)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&Str, &Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&Str, &Str, &Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&Str, &Str, &Str, &Str)>>(PhantomData);
         let _ = Tester::<
             ComposeCodec<(
-                Str, // 1
-                Str, // 2
-                Str, // 3
-                Str, // 4
-                Str, // 5
-                Str, // 6
-                Str, // 7
-                Str, // 8
-                Str, // 9
-                Str, // 10
-                Str, // 11
-                Str, // 12
-                Str, // 13
-                Str, // 14
-                Str, // 15
-                Str, // 16
-                Str, // 17
-                Str, // 18
-                Str, // 19
+                &Str, // 1
+                &Str, // 2
+                &Str, // 3
+                &Str, // 4
+                &Str, // 5
+                &Str, // 6
+                &Str, // 7
+                &Str, // 8
+                &Str, // 9
+                &Str, // 10
+                &Str, // 11
+                &Str, // 12
+                &Str, // 13
+                &Str, // 14
+                &Str, // 15
+                &Str, // 16
+                &Str, // 17
+                &Str, // 18
+                &Str, // 19
             )>,
         >(PhantomData);
     }

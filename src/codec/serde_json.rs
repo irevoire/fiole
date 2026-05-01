@@ -11,7 +11,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// /!\ Take care of the flattened struct and untyped enum. In some cases, they serialize correctly but fail to deserialize.
 pub struct SerdeJson<T>(PhantomData<T>);
 
-impl<'a, T: Serialize + 'a> Encode<'a> for SerdeJson<T> {
+impl<T: Serialize> Encode for SerdeJson<T> {
     type Item = T;
     type Error = serde_json::Error;
 
@@ -41,7 +41,7 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
 mod test {
     use serde::{Deserialize, Serialize};
 
-    use crate::codec::{Decode, Encode, EncodingVec, SerdeJson};
+    use crate::codec::{Decode, Encode, SerdeJson};
 
     #[test]
     fn encode_and_decode() {
@@ -59,11 +59,12 @@ mod test {
         let facet_bytes = serde_json::to_vec(&value).unwrap();
         let facet_deserialized = serde_json::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = SerdeJson::<Example>::encode_alloc(&value).unwrap();
-        assert_eq!(codec_bytes.as_slice(), facet_bytes);
+        let codec_bytes = SerdeJson::<Example>::encode_alloc(&value)
+            .unwrap()
+            .into_fjall_slice();
+        assert_eq!(&codec_bytes, &facet_bytes);
 
-        let codec_deserialized =
-            SerdeJson::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
+        let codec_deserialized = SerdeJson::<Example>::decode(&mut codec_bytes.into()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

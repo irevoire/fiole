@@ -16,6 +16,18 @@ pub trait Decode {
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error>;
 }
 
+impl<'a, T> Decode for &'a T
+where
+    T: Decode,
+{
+    type Item = T::Item;
+    type Error = T::Error;
+
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        T::decode(bytes)
+    }
+}
+
 pub struct DecodingVec<'a> {
     cursor: Cursor<Cow<'a, [u8]>>,
 }

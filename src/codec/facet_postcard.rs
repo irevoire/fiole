@@ -8,7 +8,7 @@ use crate::codec::{Decode, DecodingVec, Dirty, Encode, EncodingVec, Fresh};
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
 pub struct FacetPostcard<T>(PhantomData<T>);
 
-impl<'a, T: Facet<'a>> Encode<'a> for FacetPostcard<T> {
+impl<'a, T: Facet<'a>> Encode for FacetPostcard<T> {
     type Item = T;
     type Error = facet_postcard::SerializeError;
 
@@ -47,7 +47,7 @@ impl facet_postcard::Writer for EncodingVec<Dirty> {
 mod test {
     use facet::Facet;
 
-    use crate::codec::{Decode, Encode, EncodingVec, FacetPostcard};
+    use crate::codec::{Decode, Encode, FacetPostcard};
 
     #[test]
     fn encode_and_decode() {
@@ -65,11 +65,12 @@ mod test {
         let facet_bytes = facet_postcard::to_vec(&value).unwrap();
         let facet_deserialized = facet_postcard::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = FacetPostcard::<Example>::encode_alloc(&value).unwrap();
-        assert_eq!(codec_bytes.as_slice(), facet_bytes);
+        let codec_bytes = FacetPostcard::<Example>::encode_alloc(&value)
+            .unwrap()
+            .into_fjall_slice();
+        assert_eq!(&codec_bytes, &facet_bytes);
 
-        let codec_deserialized =
-            FacetPostcard::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
+        let codec_deserialized = FacetPostcard::<Example>::decode(&mut codec_bytes.into()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);

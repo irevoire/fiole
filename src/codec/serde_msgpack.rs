@@ -7,7 +7,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct as [`msgpack`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
 
-impl<'a, T: Serialize + 'a> Encode<'a> for SerdeMsgpack<T> {
+impl<T: Serialize> Encode for SerdeMsgpack<T> {
     type Item = T;
     type Error = rmp_serde::encode::Error;
 
@@ -34,7 +34,7 @@ impl<T: DeserializeOwned> Decode for SerdeMsgpack<T> {
 mod test {
     use serde::{Deserialize, Serialize};
 
-    use crate::codec::{Decode, Encode, EncodingVec, SerdeMsgpack};
+    use crate::codec::{Decode, Encode, SerdeMsgpack};
 
     #[test]
     fn encode_and_decode() {
@@ -52,11 +52,12 @@ mod test {
         let facet_bytes = rmp_serde::to_vec(&value).unwrap();
         let facet_deserialized = rmp_serde::from_slice(&facet_bytes).unwrap();
 
-        let codec_bytes = SerdeMsgpack::<Example>::encode_alloc(&value).unwrap();
-        assert_eq!(codec_bytes.as_slice(), facet_bytes);
+        let codec_bytes = SerdeMsgpack::<Example>::encode_alloc(&value)
+            .unwrap()
+            .into_fjall_slice();
+        assert_eq!(&codec_bytes, &facet_bytes);
 
-        let codec_deserialized =
-            SerdeMsgpack::<Example>::decode(&mut codec_bytes.into_decoding_vec()).unwrap();
+        let codec_deserialized = SerdeMsgpack::<Example>::decode(&mut codec_bytes.into()).unwrap();
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);
