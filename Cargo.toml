@@ -16,11 +16,11 @@ rustdoc-args = ["--generate-link-to-definition"]
 [dependencies]
 byteorder = "1.5.0"
 byteview = "0.10.1"
-facet = { version = "0.44", features = ["jiff02", "uuid"], optional = true }
-facet-format = { version = "0.44", optional = true }
-facet-json = { version = "0.44", optional = true }
-facet-postcard = { version = "0.44", optional = true }
-facet-msgpack = { version = "0.44", optional = true }
+facet = { version = "0.46", features = ["jiff02", "uuid"], optional = true }
+facet-format = { version = "0.46", optional = true }
+facet-json = { version = "0.46", optional = true }
+facet-postcard = { version = "0.46", optional = true }
+facet-msgpack = { version = "0.46", optional = true }
 fjall = "3.1.4"
 postcard = { version = "1", features = ["alloc", "use-std"], optional = true }
 rmp-serde = { version = "1", optional = true }
