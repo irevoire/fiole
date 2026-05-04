@@ -9,7 +9,7 @@ env:
 
 jobs:
   build_and_test:
-    name: Rust project - latest
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,8 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo fmt --check --verbose --all
       - run: cargo build --verbose --all-targets --all-features
       - run: cargo test --verbose --all-targets --all-features
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo fmt --check --verbose --all
       
   
