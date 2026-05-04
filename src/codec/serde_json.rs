@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use serde::{
-    de::{DeserializeOwned, Error},
     Serialize,
+    de::{DeserializeOwned, Error},
 };
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};

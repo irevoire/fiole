@@ -8,9 +8,9 @@ use std::{
 };
 
 use crate::{
+    Error, Guard, Iter, Wtxn,
     codec::{Decode, Encode},
     txn::Readable,
-    Error, Guard, Iter, Wtxn,
 };
 
 /// Wrapper around a [`fjall::OptimisticTxKeyspace`].

@@ -135,7 +135,7 @@ impl<Key, Value> DoubleEndedIterator for Iter<Key, Value> {
 mod test {
     use fjall::KeyspaceCreateOptions;
 
-    use crate::{codec::Str, Database};
+    use crate::{Database, codec::Str};
 
     #[test]
     fn get_from_wtxn() {

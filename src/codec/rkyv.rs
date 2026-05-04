@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 
 use rkyv::{
+    Archive, Deserialize, Serialize,
     api::high::{HighSerializer, HighValidator},
     bytecheck::CheckBytes,
     de::Pool,
     rancor,
     ser::allocator::ArenaHandle,
     util::AlignedVec,
-    Archive, Deserialize, Serialize,
 };
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};

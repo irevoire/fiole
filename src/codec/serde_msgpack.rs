@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
