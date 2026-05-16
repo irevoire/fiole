@@ -38,6 +38,14 @@ impl From<Slice> for DecodingVec<'static> {
     }
 }
 
+impl<'a> From<&'a Slice> for DecodingVec<'a> {
+    fn from(value: &'a Slice) -> Self {
+        Self {
+            cursor: Cursor::new(Cow::Borrowed(&value)),
+        }
+    }
+}
+
 impl<'a> DecodingVec<'a> {
     pub fn new(vec: Vec<u8>) -> Self {
         Self {
