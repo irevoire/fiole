@@ -135,7 +135,10 @@ impl<Key, Value> DoubleEndedIterator for Iter<Key, Value> {
 mod test {
     use fjall::KeyspaceCreateOptions;
 
-    use crate::{Database, codec::Str};
+    use crate::{
+        codec::{Str, U8},
+        Database,
+    };
 
     #[test]
     fn get_from_wtxn() {
@@ -151,5 +154,24 @@ mod test {
         let wtxn = database.write_tx().unwrap();
         ks.get(&wtxn, "hello").unwrap();
         drop(wtxn);
+    }
+
+    #[test]
+    fn range_query() {
+        let dir = tempfile::tempdir().unwrap();
+        let database = Database::builder(&dir.path()).unwrap();
+        let ks = database
+            .keyspace::<U8, U8>("hello", || KeyspaceCreateOptions::default())
+            .unwrap();
+
+        let mut wtxn = database.write_tx().unwrap();
+        for i in 0..10 {
+            ks.insert(&mut wtxn, &i, &i).unwrap();
+        }
+        wtxn.commit().unwrap().unwrap();
+
+        let rtxn = database.read_tx();
+        let ret: Vec<_> = ks.range(&rtxn, &(4..=5)).unwrap().collect();
+        assert_eq!(ret.len(), 2);
     }
 }

@@ -8,9 +8,9 @@ use std::{
 };
 
 use crate::{
-    Error, Guard, Iter, Wtxn,
     codec::{Decode, Encode},
     txn::Readable,
+    Error, Guard, Iter, Wtxn,
 };
 
 /// Wrapper around a [`fjall::OptimisticTxKeyspace`].
@@ -331,13 +331,13 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         range: &R,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let start = match range.start_bound() {
-            Bound::Included(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
-            Bound::Excluded(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
+            Bound::Included(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
+            Bound::Excluded(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
             Bound::Unbounded => Bound::Unbounded,
         };
         let end = match range.end_bound() {
-            Bound::Included(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
-            Bound::Excluded(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
+            Bound::Included(key) => Bound::Included(Key::encode_alloc(key)?.finish()),
+            Bound::Excluded(key) => Bound::Excluded(Key::encode_alloc(key)?.finish()),
             Bound::Unbounded => Bound::Unbounded,
         };
 
