@@ -35,7 +35,7 @@ pub struct Rtxn {
 }
 
 /// To be used when your function needs to read data from the database.
-pub trait Readable {
+pub trait Readable: Send + Sync {
     fn inner(&self) -> &impl fjall::Readable;
 }
 
