@@ -161,8 +161,8 @@ impl EncodingVec<Dirty> {
     }
 
     pub fn pop(&mut self) -> Option<u8> {
-        if self.vec.len() >= self.start_at {
-            self.pop()
+        if self.vec.len() > self.start_at {
+            self.vec.pop()
         } else {
             None
         }
@@ -196,5 +196,48 @@ impl Extend<u8> for EncodingVec<Dirty> {
 impl<'a> Extend<&'a u8> for EncodingVec<Dirty> {
     fn extend<T: IntoIterator<Item = &'a u8>>(&mut self, iter: T) {
         self.vec.extend(iter)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::convert::Infallible;
+
+    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8};
+
+    #[test]
+    fn pop() {
+        let mut vec = EncodingVec::new().edit();
+        vec.push(1);
+        vec.push(2);
+        assert_eq!(vec.pop(), Some(2));
+        assert_eq!(vec.pop(), Some(1));
+        assert_eq!(vec.pop(), None);
+        assert!(vec.finish().is_empty());
+    }
+
+    #[test]
+    fn pop_does_not_touch_previous_codecs() {
+        /// Pushes a byte, pops it, then tries to pop one more byte that belongs to the previous codec.
+        enum PopCodec {}
+
+        impl Encode for PopCodec {
+            type Item = Option<u8>;
+            type Error = Infallible;
+
+            fn encode(
+                into: EncodingVec<Fresh>,
+                expected: &Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                let mut ret = into.edit();
+                ret.push(3);
+                assert_eq!(ret.pop(), Some(3));
+                assert_eq!(ret.pop(), *expected);
+                Ok(ret.make_fresh())
+            }
+        }
+
+        let buf = ComposeCodec::<(U8, PopCodec)>::encode_alloc(&(42, None)).unwrap();
+        assert_eq!(buf.finish(), vec![42]);
     }
 }
