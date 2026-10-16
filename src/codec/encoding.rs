@@ -156,8 +156,7 @@ impl EncodingVec<Dirty> {
     }
 
     pub fn resize(&mut self, new_len: usize, value: u8) {
-        let len = new_len.saturating_sub(self.vec.len());
-        self.vec.resize(self.start_at + len, value)
+        self.vec.resize(self.start_at + new_len, value)
     }
 
     pub fn pop(&mut self) -> Option<u8> {
@@ -203,7 +202,9 @@ impl<'a> Extend<&'a u8> for EncodingVec<Dirty> {
 mod test {
     use std::convert::Infallible;
 
-    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8};
+    use byteorder::BE;
+
+    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8, U32};
 
     #[test]
     fn pop() {
@@ -239,5 +240,50 @@ mod test {
 
         let buf = ComposeCodec::<(U8, PopCodec)>::encode_alloc(&(42, None)).unwrap();
         assert_eq!(buf.finish(), vec![42]);
+    }
+
+    #[test]
+    fn resize_after_previous_codecs() {
+        /// Resizes its own section to two bytes of `7`.
+        enum ResizeCodec {}
+
+        impl Encode for ResizeCodec {
+            type Item = ();
+            type Error = Infallible;
+
+            fn encode(
+                into: EncodingVec<Fresh>,
+                _: &Self::Item,
+            ) -> Result<EncodingVec<Fresh>, Self::Error> {
+                let mut ret = into.edit();
+                ret.resize(2, 7);
+                Ok(ret.make_fresh())
+            }
+        }
+
+        let buf = ComposeCodec::<(U32<BE>, ResizeCodec)>::encode_alloc(&(1, ())).unwrap();
+        assert_eq!(buf.finish(), vec![0, 0, 0, 1, 7, 7]);
+    }
+
+    #[test]
+    fn resize_grows_existing_bytes() {
+        let mut vec = EncodingVec::new().edit();
+        vec.extend([1, 2, 3]);
+        vec.resize(5, 9);
+        assert_eq!(vec.finish(), vec![1, 2, 3, 9, 9]);
+    }
+
+    #[test]
+    fn resize_never_shrinks_below_start_at() {
+        let mut prefix = EncodingVec::new().edit();
+        prefix.extend([42, 43]);
+
+        let mut vec = prefix.make_fresh().edit();
+        vec.extend([1, 2, 3]);
+        vec.resize(1, 0);
+        assert_eq!(vec.as_slice(), &[1]);
+        vec.resize(0, 0);
+        assert!(vec.as_slice().is_empty());
+        assert_eq!(vec.finish(), vec![42, 43]);
     }
 }
