@@ -5,6 +5,50 @@ use std::{
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
+/// Encode a tuple by writing each element one after the other, with nothing in between.
+///
+/// Every element except the last must be self-delimiting.
+/// Final codecs, which decode everything till the end, can only be used as the last element.
+/// To use one elsewhere, wrap it in a [`SizedCodec`](crate::codec::SizedCodec).
+///
+/// ```
+/// use fiole::codec::{ComposeCodec, Decode, Encode, SizedCodec, Str, U8};
+///
+/// type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8, &'a Str)>;
+/// let buf = Codec::encode_alloc(&("hello", 1, "world")).unwrap();
+/// let decoded = Codec::decode(&mut buf.into_decoding_vec()).unwrap();
+/// assert_eq!(decoded, ("hello".to_string(), 1, "world".to_string()));
+///
+/// // A compose made only of self-delimiting codecs can itself be followed by another codec
+/// type Nested = ComposeCodec<(ComposeCodec<(U8, U8)>, U8)>;
+/// let buf = Nested::encode_alloc(&((1, 2), 3)).unwrap();
+/// assert_eq!(Nested::decode(&mut buf.into_decoding_vec()).unwrap(), ((1, 2), 3));
+/// ```
+///
+/// A final codec can't be followed by anything when encoding:
+///
+/// ```compile_fail,E0277
+/// use fiole::codec::{ComposeCodec, Encode, Str, U8};
+///
+/// ComposeCodec::<(&Str, U8)>::encode_alloc(&("hello", 1)).unwrap();
+/// ```
+///
+/// nor when decoding:
+///
+/// ```compile_fail,E0277
+/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Str, U8};
+///
+/// ComposeCodec::<(Str, U8)>::decode(&mut DecodingVec::new(vec![b'a', 1])).unwrap();
+/// ```
+///
+/// even inside a nested compose:
+///
+/// ```compile_fail,E0277
+/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Str, U8};
+///
+/// ComposeCodec::<(ComposeCodec<(U8, Str)>, U8)>::decode(&mut DecodingVec::new(vec![1, b'a', 2]))
+///     .unwrap();
+/// ```
 pub struct ComposeCodec<T>(PhantomData<T>);
 
 // We keep the following implementation made by hand to help debug the macro below
@@ -352,5 +396,30 @@ mod test {
                 &Str, // 19
             )>,
         >(PhantomData);
+    }
+
+    #[test]
+    fn self_delimiting_codecs() {
+        use byteorder::{NativeEndian, BE, LE};
+
+        use crate::codec::{assert_self_delimiting, I64, I8, U128, U16, U32};
+
+        assert_self_delimiting::<U8>(u8::MAX, u8::MAX);
+        assert_self_delimiting::<I8>(i8::MIN, i8::MIN);
+        assert_self_delimiting::<U16<BE>>(u16::MAX, u16::MAX);
+        assert_self_delimiting::<U32<LE>>(u32::MAX, u32::MAX);
+        assert_self_delimiting::<I64<BE>>(i64::MIN, i64::MIN);
+        assert_self_delimiting::<U128<NativeEndian>>(u128::MAX, u128::MAX);
+
+        assert_self_delimiting::<&SizedCodec<Str>>("hello", "hello".to_string());
+        assert_self_delimiting::<&SizedCodec<Str>>("", String::new());
+        assert_self_delimiting::<&SizedCodec<Bytes>>(&[1, 2, 3], vec![1, 2, 3]);
+        assert_self_delimiting::<SizedCodec<U8>>(42, 42);
+
+        assert_self_delimiting::<ComposeCodec<(U8, U16<BE>)>>((1, 2), (1, 2));
+        assert_self_delimiting::<ComposeCodec<(U8, &SizedCodec<Str>)>>(
+            (1, "hello"),
+            (1, "hello".to_string()),
+        );
     }
 }
