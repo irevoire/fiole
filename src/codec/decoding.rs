@@ -69,7 +69,15 @@ impl<'a> DecodingVec<'a> {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.cursor.get_ref().len() == self.cursor.position() as usize
+        self.remaining() == 0
+    }
+
+    /// Number of bytes left to read.
+    pub fn remaining(&self) -> usize {
+        self.cursor
+            .get_ref()
+            .len()
+            .saturating_sub(self.cursor.position() as usize)
     }
 
     /// Useful when your codec is going to consume everything till the end.

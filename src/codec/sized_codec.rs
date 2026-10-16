@@ -31,6 +31,11 @@ impl<C: Encode> Encode for SizedCodec<C> {
 #[derive(Debug)]
 pub enum SizedCodecError<E> {
     TooSmall,
+    /// The size header announces more bytes than what remains.
+    Truncated {
+        expected: usize,
+        available: usize,
+    },
     Other(E),
 }
 
@@ -38,6 +43,7 @@ impl<E: fmt::Display> fmt::Display for SizedCodecError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SizedCodecError::TooSmall => f.write_str("Sized codec couldn't deserialize the size because it received a slice of less than 4 bytes"),
+            SizedCodecError::Truncated { expected, available } => write!(f, "Sized codec expected {expected} bytes but only {available} bytes remain"),
             SizedCodecError::Other(e) => e.fmt(f),
         }
     }
@@ -53,15 +59,22 @@ impl<C: Decode> Decode for SizedCodec<C> {
         bytes
             .read_exact(&mut size)
             .map_err(|_| SizedCodecError::TooSmall)?;
-        let size = u32::from_be_bytes(size);
-        let mut sub = bytes.take_next(size as usize);
+        let size = u32::from_be_bytes(size) as usize;
+        let available = bytes.remaining();
+        if available < size {
+            return Err(SizedCodecError::Truncated {
+                expected: size,
+                available,
+            });
+        }
+        let mut sub = bytes.take_next(size);
         C::decode(&mut sub).map_err(SizedCodecError::Other)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{Bytes, Decode, DecodingVec, Encode, SizedCodec, Str};
+    use crate::codec::{Bytes, Decode, DecodingVec, Encode, SizedCodec, SizedCodecError, Str};
 
     #[test]
     fn sized() {
@@ -115,5 +128,38 @@ mod test {
         assert_eq!(&decode_bytes, &[13, 12]);
         assert!(decoder.is_empty());
         assert!(decoder.consume().is_empty());
+    }
+
+    #[test]
+    fn truncated_data_is_an_error() {
+        // The header announces 10 bytes but only 2 follow
+        let mut decoder = DecodingVec::new(vec![0, 0, 0, 10, b'h', b'i']);
+        assert!(matches!(
+            SizedCodec::<Str>::decode(&mut decoder),
+            Err(SizedCodecError::Truncated {
+                expected: 10,
+                available: 2
+            })
+        ));
+
+        // The header announces 1 byte but nothing follows
+        let mut decoder = DecodingVec::new(vec![0, 0, 0, 1]);
+        assert!(matches!(
+            SizedCodec::<Str>::decode(&mut decoder),
+            Err(SizedCodecError::Truncated {
+                expected: 1,
+                available: 0
+            })
+        ));
+
+        // When the size matches exactly it must still work
+        let mut decoder = DecodingVec::new(vec![0, 0, 0, 2, b'h', b'i']);
+        assert_eq!(SizedCodec::<Str>::decode(&mut decoder).unwrap(), "hi");
+        assert!(decoder.is_empty());
+
+        // Even if there is no data afterward
+        let mut decoder = DecodingVec::new(vec![0, 0, 0, 0]);
+        assert_eq!(SizedCodec::<Str>::decode(&mut decoder).unwrap(), "");
+        assert!(decoder.is_empty());
     }
 }
