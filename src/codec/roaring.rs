@@ -97,4 +97,17 @@ mod test {
         assert_eq!(codec_deserialized, roaring_deserialized);
         assert_eq!(codec_deserialized, bitmap);
     }
+
+    #[test]
+    fn self_delimiting() {
+        use crate::codec::assert_self_delimiting;
+
+        let bitmap = RoaringBitmap::from_iter(&[1, 2, 3, 5, 2058, 2064, 2080, 2090]);
+        assert_self_delimiting::<RoaringBitmapCodec>(bitmap.clone(), bitmap);
+        assert_self_delimiting::<RoaringBitmapCodec>(RoaringBitmap::new(), RoaringBitmap::new());
+
+        let treemap = RoaringTreemap::from_iter(&[1, 2, 3, 5, 2058, 2064, 2080, u64::MAX]);
+        assert_self_delimiting::<RoaringTreemapCodec>(treemap.clone(), treemap);
+        assert_self_delimiting::<RoaringTreemapCodec>(RoaringTreemap::new(), RoaringTreemap::new());
+    }
 }

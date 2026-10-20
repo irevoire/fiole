@@ -62,4 +62,33 @@ mod test {
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);
     }
+
+    #[test]
+    fn self_delimiting() {
+        use std::collections::BTreeMap;
+
+        use crate::codec::assert_self_delimiting;
+
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+        struct Example {
+            name: String,
+            value: i32,
+        }
+
+        let value = Example {
+            name: "pi".to_string(),
+            value: 31415926,
+        };
+        assert_self_delimiting::<SerdeMsgpack<Example>>(value.clone(), value);
+        assert_self_delimiting::<SerdeMsgpack<u32>>(12, 12);
+        assert_self_delimiting::<SerdeMsgpack<u64>>(u64::MAX, u64::MAX);
+        assert_self_delimiting::<SerdeMsgpack<i8>>(-1, -1);
+        assert_self_delimiting::<SerdeMsgpack<bool>>(true, true);
+        assert_self_delimiting::<SerdeMsgpack<f64>>(1.5, 1.5);
+        assert_self_delimiting::<SerdeMsgpack<String>>("hi".to_string(), "hi".to_string());
+        assert_self_delimiting::<SerdeMsgpack<Vec<u8>>>(vec![1, 2], vec![1, 2]);
+        assert_self_delimiting::<SerdeMsgpack<Option<u8>>>(None, None);
+        let map = BTreeMap::from([("a".to_string(), 1)]);
+        assert_self_delimiting::<SerdeMsgpack<BTreeMap<String, u8>>>(map.clone(), map);
+    }
 }

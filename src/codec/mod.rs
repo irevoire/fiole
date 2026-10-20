@@ -72,6 +72,24 @@ impl Decode for DecodeIgnore {
     }
 }
 
+/// Asserts that `C` decodes exactly the bytes it encoded by following it with an [`U8`] in a [`ComposeCodec`].
+#[cfg(test)]
+#[track_caller]
+pub(crate) fn assert_self_delimiting<C>(item: <C as Encode>::Item, expected: <C as Decode>::Item)
+where
+    C: Encode + Decode,
+    <C as Encode>::Item: Sized,
+    <C as Encode>::Error: std::fmt::Debug,
+    <C as Decode>::Item: PartialEq + std::fmt::Debug,
+    <C as Decode>::Error: std::fmt::Debug,
+{
+    let buf = ComposeCodec::<(C, U8)>::encode_alloc(&(item, 9)).unwrap();
+    let mut decoder = buf.into_decoding_vec();
+    let decoded = ComposeCodec::<(C, U8)>::decode(&mut decoder).unwrap();
+    assert_eq!(decoded, (expected, 9));
+    assert!(decoder.is_empty());
+}
+
 #[cfg(test)]
 mod test {
     use crate::codec::EncodingVec;
