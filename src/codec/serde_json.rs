@@ -1,14 +1,19 @@
 use std::marker::PhantomData;
 
-use serde::{
-    Serialize,
-    de::{DeserializeOwned, Error},
-};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as json through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 /// /!\ Take care of the flattened struct and untyped enum. In some cases, they serialize correctly but fail to deserialize.
+///
+/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`SizedCodec`](crate::codec::SizedCodec) codec.
+///
+/// ```compile_fail,E0599
+/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, SerdeJson, U8};
+///
+/// ComposeCodec::<(SerdeJson<u32>, U8)>::decode(&mut DecodingVec::new(b"12".to_vec())).unwrap();
+/// ```
 pub struct SerdeJson<T>(PhantomData<T>);
 
 impl<T: Serialize> Encode for SerdeJson<T> {
@@ -30,10 +35,7 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
     type Error = serde_json::Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        serde_json::de::Deserializer::from_reader(bytes)
-            .into_iter()
-            .next()
-            .ok_or_else(|| serde_json::Error::custom("Empty slice"))?
+        serde_json::from_slice(&bytes.consume())
     }
 }
 
@@ -41,7 +43,7 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
 mod test {
     use serde::{Deserialize, Serialize};
 
-    use crate::codec::{Decode, Encode, SerdeJson};
+    use crate::codec::{ComposeCodec, Decode, DecodingVec, Encode, SerdeJson, SizedCodec, U8};
 
     #[test]
     fn encode_and_decode() {
@@ -68,5 +70,44 @@ mod test {
 
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);
+    }
+
+    #[test]
+    fn bare_values() {
+        let buf = SerdeJson::<u32>::encode_alloc(&12).unwrap();
+        let mut decoder = buf.into_decoding_vec();
+        assert_eq!(SerdeJson::<u32>::decode(&mut decoder).unwrap(), 12);
+        assert!(decoder.is_empty());
+
+        let buf = SerdeJson::<bool>::encode_alloc(&true).unwrap();
+        let mut decoder = buf.into_decoding_vec();
+        assert!(SerdeJson::<bool>::decode(&mut decoder).unwrap());
+        assert!(decoder.is_empty());
+    }
+
+    #[test]
+    fn is_final() {
+        // It consumes everything till the end
+        let mut decoder = DecodingVec::new(b"[1,2] ".to_vec());
+        assert_eq!(
+            SerdeJson::<Vec<u8>>::decode(&mut decoder).unwrap(),
+            vec![1, 2]
+        );
+        assert!(decoder.is_empty());
+
+        // And refuses anything that is not part of the json value
+        let mut decoder = DecodingVec::new(b"[1,2]x".to_vec());
+        assert!(SerdeJson::<Vec<u8>>::decode(&mut decoder).is_err());
+        let mut decoder = DecodingVec::new(b"12x".to_vec());
+        assert!(SerdeJson::<u32>::decode(&mut decoder).is_err());
+    }
+
+    #[test]
+    fn wrapped_in_sized_codec() {
+        type Codec = ComposeCodec<(SizedCodec<SerdeJson<u32>>, U8)>;
+        let buf = Codec::encode_alloc(&(12, 9)).unwrap();
+        let mut decoder = buf.into_decoding_vec();
+        assert_eq!(Codec::decode(&mut decoder).unwrap(), (12, 9));
+        assert!(decoder.is_empty());
     }
 }
