@@ -43,4 +43,5 @@ roaring = ["dep:roaring"]
 rkyv = ["dep:rkyv"]
 
 [dev-dependencies]
+serde = { version = "1", features = ["derive"] }
 tempfile = "3.27.0"

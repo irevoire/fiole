@@ -9,6 +9,29 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///
 /// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`SizedCodec`](crate::codec::SizedCodec) codec.
 ///
+/// ```
+/// use fiole::codec::{Decode, DecodingVec, Encode, SerdeJson};
+/// use serde::{Deserialize, Serialize};
+///
+/// #[derive(Debug, PartialEq, Serialize, Deserialize)]
+/// struct Person {
+///     name: String,
+///     age: u8,
+/// }
+///
+/// let alice = Person { name: "Alice".to_string(), age: 30 };
+///
+/// // Encode the struct as json
+/// let bytes = SerdeJson::<Person>::encode_alloc(&alice).unwrap().finish();
+/// assert_eq!(bytes, br#"{"name":"Alice","age":30}"#);
+///
+/// // And decode it back
+/// let decoded = SerdeJson::<Person>::decode(&mut DecodingVec::new(bytes)).unwrap();
+/// assert_eq!(decoded, alice);
+/// ```
+///
+/// It can't be followed by another codec in a [`ComposeCodec`](crate::codec::ComposeCodec):
+///
 /// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Decode, DecodingVec, SerdeJson, U8};
 ///
