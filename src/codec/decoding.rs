@@ -72,6 +72,12 @@ impl<'a> DecodingVec<'a> {
         self.remaining() == 0
     }
 
+    /// Moves the cursor to the end without reading anything.
+    pub fn skip_to_end(&mut self) {
+        let len = self.cursor.get_ref().len();
+        self.cursor.set_position(len as u64);
+    }
+
     /// Number of bytes left to read.
     pub fn remaining(&self) -> usize {
         self.cursor

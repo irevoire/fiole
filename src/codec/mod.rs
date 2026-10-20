@@ -79,22 +79,34 @@ impl<T: SelfDelimiting + ?Sized> SelfDelimiting for &T {}
 pub enum Unspecified {}
 
 /// Convenient struct to ignore the decoding part and return the unit type instead.
-/// Can be useful when working with [`crate::Guard`], but keep in mind that it still does a useless allocation.
+/// Can be useful when working with [`crate::Guard`], but keep in mind that the bytes are still copied out of fjall before being ignored.
 /// Ideally, you should use the [`crate::Keyspace::contains_key`] or [`crate::Keyspace::size_of`] methods instead.
+///
+/// /!\ This codec is final: It ignores everything till the end and can't be used with other codec if it's not being wrapped in a [`SizedCodec`] codec.
+/// To ignore a field in the middle of a [`ComposeCodec`], use `SizedCodec<DecodeIgnore>`.
+///
+/// ```compile_fail,E0599
+/// use fiole::codec::{ComposeCodec, Decode, DecodeIgnore, DecodingVec, U8};
+///
+/// ComposeCodec::<(DecodeIgnore, U8)>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap();
+/// ```
 pub enum DecodeIgnore {}
 
 impl Decode for DecodeIgnore {
     type Item = ();
     type Error = Infallible;
 
-    fn decode(_: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+    fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
+        bytes.skip_to_end();
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::codec::EncodingVec;
+    use crate::codec::{
+        ComposeCodec, Decode, DecodeIgnore, DecodingVec, Encode, EncodingVec, SizedCodec, Str, U8,
+    };
 
     #[test]
     fn encoding_vec() {
@@ -110,5 +122,28 @@ mod test {
         vec.clear();
         let bytes = vec.into_fjall_slice();
         assert_eq!(&bytes, &[42, 36]);
+    }
+
+    #[test]
+    fn decode_ignore_consumes_everything() {
+        let mut decoder = DecodingVec::new(vec![1, 2, 3]);
+        DecodeIgnore::decode(&mut decoder).unwrap();
+        assert!(decoder.is_empty());
+
+        let mut decoder = DecodingVec::new(vec![1, 2, 3]);
+        let decoded = ComposeCodec::<(U8, DecodeIgnore)>::decode(&mut decoder).unwrap();
+        assert_eq!(decoded, (1, ()));
+        assert!(decoder.is_empty());
+    }
+
+    #[test]
+    fn decode_ignore_in_the_middle_of_a_compose() {
+        type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8)>;
+        let buf = Codec::encode_alloc(&("hello", 9)).unwrap();
+
+        type Ignore = ComposeCodec<(SizedCodec<DecodeIgnore>, U8)>;
+        let mut decoder = buf.into_decoding_vec();
+        assert_eq!(Ignore::decode(&mut decoder).unwrap(), ((), 9));
+        assert!(decoder.is_empty());
     }
 }
