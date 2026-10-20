@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
 /// Encode a tuple by writing each element one after the other, with nothing in between.
 ///
@@ -27,7 +27,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///
 /// A final codec can't be followed by anything when encoding:
 ///
-/// ```compile_fail,E0277
+/// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Encode, Str, U8};
 ///
 /// ComposeCodec::<(&Str, U8)>::encode_alloc(&("hello", 1)).unwrap();
@@ -35,7 +35,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///
 /// nor when decoding:
 ///
-/// ```compile_fail,E0277
+/// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Str, U8};
 ///
 /// ComposeCodec::<(Str, U8)>::decode(&mut DecodingVec::new(vec![b'a', 1])).unwrap();
@@ -43,7 +43,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///
 /// even inside a nested compose:
 ///
-/// ```compile_fail,E0277
+/// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Str, U8};
 ///
 /// ComposeCodec::<(ComposeCodec<(U8, Str)>, U8)>::decode(&mut DecodingVec::new(vec![1, b'a', 2]))
@@ -108,8 +108,11 @@ impl<C1: Decode> Decode for ComposeCodec<(C1,)> {
     }
 }
 
+impl<C1: SelfDelimiting> SelfDelimiting for ComposeCodec<(C1,)> {}
+
 macro_rules! compose_impl {
-    ($error_name:ident => $($C:ident)+) => {
+    // `$C` lists every element, `$Init` every element except the last one.
+    ($error_name:ident => [$($C:ident)+] [$($Init:ident)+]) => {
         #[derive(Debug)]
         pub enum $error_name<$($C),+> {
             $($C($C)),+
@@ -146,6 +149,7 @@ macro_rules! compose_impl {
               $C: Encode,
               $C::Item: Sized,
           )+
+          $($Init: SelfDelimiting,)+
           {
             type Item = ($($C::Item),+);
             type Error = $error_name<$($C::Error),+>;
@@ -163,10 +167,8 @@ macro_rules! compose_impl {
 
         impl<$($C),+> Decode for ComposeCodec<($($C),+)>
         where
-          $(
-              $C: Decode,
-              $C::Item: Sized,
-          )+
+          $($C: Decode,)+
+          $($Init: SelfDelimiting,)+
           {
             type Item = ($($C::Item),+);
             type Error = $error_name<$($C::Error),+>;
@@ -177,13 +179,15 @@ macro_rules! compose_impl {
                 )
             }
         }
+
+        impl<$($C: SelfDelimiting),+> SelfDelimiting for ComposeCodec<($($C),+)> {}
     };
     ($N:literal) => {
         paste! {
-        seq!{M in 1..=$N {
+        seq!{M in 1..$N {
             compose_impl! {
                 [<ComposeCodecError $N>]
-                    => #(C~M)*
+                    => [#(C~M)* [<C $N>]] [#(C~M)*]
                 }
             }}
         }
@@ -369,40 +373,43 @@ mod test {
         struct Tester<T: Encode + Decode>(PhantomData<T>);
 
         // let _ = Tester::<(crate::codec::DecodeIgnore,)>(PhantomData);
+        // Every element but the last must be self-delimiting
         let _ = Tester::<ComposeCodec<(&Str,)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(&Str, &Str)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(&Str, &Str, &Str)>>(PhantomData);
-        let _ = Tester::<ComposeCodec<(&Str, &Str, &Str, &Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&SizedCodec<Str>, &Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&SizedCodec<Str>, &SizedCodec<Str>, &Str)>>(PhantomData);
+        let _ = Tester::<ComposeCodec<(&SizedCodec<Str>, &SizedCodec<Str>, &SizedCodec<Str>, &Str)>>(
+            PhantomData,
+        );
         let _ = Tester::<
             ComposeCodec<(
-                &Str, // 1
-                &Str, // 2
-                &Str, // 3
-                &Str, // 4
-                &Str, // 5
-                &Str, // 6
-                &Str, // 7
-                &Str, // 8
-                &Str, // 9
-                &Str, // 10
-                &Str, // 11
-                &Str, // 12
-                &Str, // 13
-                &Str, // 14
-                &Str, // 15
-                &Str, // 16
-                &Str, // 17
-                &Str, // 18
-                &Str, // 19
+                &SizedCodec<Str>, // 1
+                &SizedCodec<Str>, // 2
+                &SizedCodec<Str>, // 3
+                &SizedCodec<Str>, // 4
+                &SizedCodec<Str>, // 5
+                &SizedCodec<Str>, // 6
+                &SizedCodec<Str>, // 7
+                &SizedCodec<Str>, // 8
+                &SizedCodec<Str>, // 9
+                &SizedCodec<Str>, // 10
+                &SizedCodec<Str>, // 11
+                &SizedCodec<Str>, // 12
+                &SizedCodec<Str>, // 13
+                &SizedCodec<Str>, // 14
+                &SizedCodec<Str>, // 15
+                &SizedCodec<Str>, // 16
+                &SizedCodec<Str>, // 17
+                &SizedCodec<Str>, // 18
+                &Str,             // 19
             )>,
         >(PhantomData);
     }
 
     #[test]
     fn self_delimiting_codecs() {
-        use byteorder::{NativeEndian, BE, LE};
+        use byteorder::{BE, LE, NativeEndian};
 
-        use crate::codec::{assert_self_delimiting, I64, I8, U128, U16, U32};
+        use crate::codec::{I8, I64, U16, U32, U128, assert_self_delimiting};
 
         assert_self_delimiting::<U8>(u8::MAX, u8::MAX);
         assert_self_delimiting::<I8>(i8::MIN, i8::MIN);

@@ -1,4 +1,4 @@
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 use byteorder::{ByteOrder, ReadBytesExt};
 
 use std::convert::Infallible;
@@ -30,8 +30,12 @@ impl Decode for U8 {
     }
 }
 
+impl SelfDelimiting for U8 {}
+
 /// Encodable version of [`i8`].
 pub enum I8 {}
+
+impl SelfDelimiting for I8 {}
 
 impl Encode for I8 {
     type Item = i8;
@@ -62,6 +66,8 @@ macro_rules! define_type {
         #[doc = stringify!($native)]
         #[doc = "`]."]
         pub struct $name<O>(PhantomData<O>);
+
+        impl<O> SelfDelimiting for $name<O> {}
 
         impl<O: ByteOrder> Encode for $name<O> {
             type Item = $native;

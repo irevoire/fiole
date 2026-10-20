@@ -55,6 +55,22 @@ mod rkyv;
 #[cfg(feature = "rkyv")]
 pub use rkyv::*;
 
+/// Marker trait for the codecs that know where their own bytes end.
+///
+/// A self-delimiting codec decodes exactly the bytes it encoded and leaves the
+/// cursor on the first byte that follows, so it can be followed by another
+/// codec in a [`ComposeCodec`]. Every element of a [`ComposeCodec`] except the
+/// last one must implement this trait.
+///
+/// Codecs that don't implement it are *final*: they decode everything till the
+/// end. Wrap them in a [`SizedCodec`] to make them self-delimiting.
+///
+/// Only implement it on your own codec if its [`Decode::decode`] never reads
+/// past the bytes written by its [`Encode::encode`], whatever bytes follow.
+pub trait SelfDelimiting {}
+
+impl<T: SelfDelimiting + ?Sized> SelfDelimiting for &T {}
+
 /// Dummy codec if you don't know yet which codec will be used
 pub enum Unspecified {}
 
@@ -77,7 +93,7 @@ impl Decode for DecodeIgnore {
 #[track_caller]
 pub(crate) fn assert_self_delimiting<C>(item: <C as Encode>::Item, expected: <C as Decode>::Item)
 where
-    C: Encode + Decode,
+    C: Encode + Decode + SelfDelimiting,
     <C as Encode>::Item: Sized,
     <C as Encode>::Error: std::fmt::Debug,
     <C as Decode>::Item: PartialEq + std::fmt::Debug,

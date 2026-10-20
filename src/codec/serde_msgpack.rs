@@ -2,10 +2,12 @@ use std::marker::PhantomData;
 
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
 /// Encode a struct as [`msgpack`] through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
+
+impl<T> SelfDelimiting for SerdeMsgpack<T> {}
 
 impl<T: Serialize> Encode for SerdeMsgpack<T> {
     type Item = T;

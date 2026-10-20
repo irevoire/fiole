@@ -2,9 +2,11 @@ use std::{fmt, io::Read, marker::PhantomData};
 
 use byteorder::ByteOrder;
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
 pub struct SizedCodec<C>(PhantomData<C>);
+
+impl<C> SelfDelimiting for SizedCodec<C> {}
 
 impl<C: Encode> Encode for SizedCodec<C> {
     type Item = C::Item;

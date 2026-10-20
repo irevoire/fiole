@@ -1,9 +1,11 @@
 use roaring::{RoaringBitmap, RoaringTreemap};
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
 /// Encode a roaring bitmap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringBitmapCodec {}
+
+impl SelfDelimiting for RoaringBitmapCodec {}
 
 impl Encode for RoaringBitmapCodec {
     type Item = RoaringBitmap;
@@ -30,6 +32,8 @@ impl Decode for RoaringBitmapCodec {
 
 /// Encode a roaring treemap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
 pub enum RoaringTreemapCodec {}
+
+impl SelfDelimiting for RoaringTreemapCodec {}
 
 impl Encode for RoaringTreemapCodec {
     type Item = RoaringTreemap;
