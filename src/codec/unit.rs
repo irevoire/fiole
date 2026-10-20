@@ -42,3 +42,13 @@ impl fmt::Display for NonEmptyError {
 }
 
 impl StdError for NonEmptyError {}
+
+#[cfg(test)]
+mod test {
+    use crate::codec::{Unit, check_round_trip};
+
+    #[test]
+    fn round_trip() {
+        arbtest::arbtest(check_round_trip::<Unit, ()>);
+    }
+}

@@ -411,25 +411,25 @@ mod test {
 
         use crate::codec::{I8, I16, I32, I64, I128, U16, U32, U64, U128, check_self_delimiting};
 
-        arbtest::arbtest(|u| check_self_delimiting::<U8, u8>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<I8, i8>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<U16<BE>, u16>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<I16<LE>, i16>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<U32<LE>, u32>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<I32<BE>, i32>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<U64<BE>, u64>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<I64<NativeEndian>, i64>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<U128<NativeEndian>, u128>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<I128<BE>, i128>(u));
+        arbtest::arbtest(check_self_delimiting::<U8, u8>);
+        arbtest::arbtest(check_self_delimiting::<I8, i8>);
+        arbtest::arbtest(check_self_delimiting::<U16<BE>, u16>);
+        arbtest::arbtest(check_self_delimiting::<I16<LE>, i16>);
+        arbtest::arbtest(check_self_delimiting::<U32<LE>, u32>);
+        arbtest::arbtest(check_self_delimiting::<I32<BE>, i32>);
+        arbtest::arbtest(check_self_delimiting::<U64<BE>, u64>);
+        arbtest::arbtest(check_self_delimiting::<I64<NativeEndian>, i64>);
+        arbtest::arbtest(check_self_delimiting::<U128<NativeEndian>, u128>);
+        arbtest::arbtest(check_self_delimiting::<I128<BE>, i128>);
     }
 
     #[test]
     fn sized_codec_is_self_delimiting() {
         use crate::codec::check_self_delimiting;
 
-        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<Str>, String>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<Bytes>, Vec<u8>>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<U8>, u8>(u));
+        arbtest::arbtest(check_self_delimiting::<SizedCodec<Str>, String>);
+        arbtest::arbtest(check_self_delimiting::<SizedCodec<Bytes>, Vec<u8>>);
+        arbtest::arbtest(check_self_delimiting::<SizedCodec<U8>, u8>);
     }
 
     #[test]
@@ -438,8 +438,8 @@ mod test {
 
         use crate::codec::{U16, U32, check_self_delimiting};
 
-        arbtest::arbtest(|u| check_self_delimiting::<ComposeCodec<(U8,)>, (u8,)>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<ComposeCodec<(U8, U16<BE>)>, (u8, u16)>(u));
+        arbtest::arbtest(check_self_delimiting::<ComposeCodec<(U8,)>, (u8,)>);
+        arbtest::arbtest(check_self_delimiting::<ComposeCodec<(U8, U16<BE>)>, (u8, u16)>);
         arbtest::arbtest(|u| {
             check_self_delimiting::<
                 ComposeCodec<(SizedCodec<U16<BE>>, ComposeCodec<(U8, U32<LE>)>)>,

@@ -133,4 +133,21 @@ mod test {
         assert_eq!(Codec::decode(&mut decoder).unwrap(), (12, 9));
         assert!(decoder.is_empty());
     }
+
+    #[test]
+    fn round_trip() {
+        use crate::codec::check_round_trip;
+
+        #[derive(Serialize, Deserialize, arbitrary::Arbitrary, Debug, PartialEq)]
+        struct Example {
+            name: String,
+            value: i32,
+            big: u64,
+            tags: Vec<Option<bool>>,
+        }
+
+        arbtest::arbtest(check_round_trip::<SerdeJson<Example>, Example>);
+        arbtest::arbtest(check_round_trip::<SerdeJson<String>, String>);
+        arbtest::arbtest(check_round_trip::<SerdeJson<i64>, i64>);
+    }
 }

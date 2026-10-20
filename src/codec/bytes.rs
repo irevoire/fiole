@@ -28,3 +28,13 @@ impl Decode for Bytes {
         Ok(bytes.consume())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::codec::{Bytes, check_round_trip};
+
+    #[test]
+    fn round_trip() {
+        arbtest::arbtest(check_round_trip::<Bytes, Vec<u8>>);
+    }
+}

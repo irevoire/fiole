@@ -75,4 +75,21 @@ mod test {
         assert_eq!(codec_deserialized, facet_deserialized);
         assert_eq!(codec_deserialized, value);
     }
+
+    #[test]
+    fn round_trip() {
+        use crate::codec::check_round_trip;
+
+        #[derive(Facet, arbitrary::Arbitrary, Debug, PartialEq)]
+        struct Example {
+            name: String,
+            value: i32,
+            big: u64,
+            tags: Vec<Option<bool>>,
+        }
+
+        arbtest::arbtest(check_round_trip::<FacetPostcard<Example>, Example>);
+        arbtest::arbtest(check_round_trip::<FacetPostcard<String>, String>);
+        arbtest::arbtest(check_round_trip::<FacetPostcard<i64>, i64>);
+    }
 }

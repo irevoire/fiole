@@ -80,14 +80,14 @@ mod test {
             tags: Vec<Option<bool>>,
         }
 
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Example>, Example>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<u32>, u32>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<u64>, u64>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<i8>, i8>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<bool>, bool>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<String>, String>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Vec<u8>>, Vec<u8>>(u));
-        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Option<u8>>, Option<u8>>(u));
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<Example>, Example>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<u32>, u32>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<u64>, u64>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<i8>, i8>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<bool>, bool>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<String>, String>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<Vec<u8>>, Vec<u8>>);
+        arbtest::arbtest(check_self_delimiting::<SerdeMsgpack<Option<u8>>, Option<u8>>);
         arbtest::arbtest(|u| {
             check_self_delimiting::<SerdeMsgpack<BTreeMap<String, u8>>, BTreeMap<String, u8>>(u)
         });
@@ -98,5 +98,22 @@ mod test {
                 Ok(if f.is_nan() { 0.0 } else { f })
             })
         });
+    }
+
+    #[test]
+    fn round_trip() {
+        use crate::codec::check_round_trip;
+
+        #[derive(Serialize, Deserialize, arbitrary::Arbitrary, Debug, PartialEq)]
+        struct Example {
+            name: String,
+            value: i32,
+            big: u64,
+            tags: Vec<Option<bool>>,
+        }
+
+        arbtest::arbtest(check_round_trip::<SerdeMsgpack<Example>, Example>);
+        arbtest::arbtest(check_round_trip::<SerdeMsgpack<String>, String>);
+        arbtest::arbtest(check_round_trip::<SerdeMsgpack<i64>, i64>);
     }
 }
