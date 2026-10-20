@@ -69,28 +69,34 @@ mod test {
     fn self_delimiting() {
         use std::collections::BTreeMap;
 
-        use crate::codec::assert_self_delimiting;
+        use arbitrary::Arbitrary;
 
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+        use crate::codec::{check_self_delimiting, check_self_delimiting_with};
+
+        #[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq)]
         struct Example {
             name: String,
             value: i32,
+            tags: Vec<Option<bool>>,
         }
 
-        let value = Example {
-            name: "pi".to_string(),
-            value: 31415926,
-        };
-        assert_self_delimiting::<SerdeMsgpack<Example>>(value.clone(), value);
-        assert_self_delimiting::<SerdeMsgpack<u32>>(12, 12);
-        assert_self_delimiting::<SerdeMsgpack<u64>>(u64::MAX, u64::MAX);
-        assert_self_delimiting::<SerdeMsgpack<i8>>(-1, -1);
-        assert_self_delimiting::<SerdeMsgpack<bool>>(true, true);
-        assert_self_delimiting::<SerdeMsgpack<f64>>(1.5, 1.5);
-        assert_self_delimiting::<SerdeMsgpack<String>>("hi".to_string(), "hi".to_string());
-        assert_self_delimiting::<SerdeMsgpack<Vec<u8>>>(vec![1, 2], vec![1, 2]);
-        assert_self_delimiting::<SerdeMsgpack<Option<u8>>>(None, None);
-        let map = BTreeMap::from([("a".to_string(), 1)]);
-        assert_self_delimiting::<SerdeMsgpack<BTreeMap<String, u8>>>(map.clone(), map);
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Example>, Example>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<u32>, u32>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<u64>, u64>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<i8>, i8>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<bool>, bool>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<String>, String>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Vec<u8>>, Vec<u8>>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SerdeMsgpack<Option<u8>>, Option<u8>>(u));
+        arbtest::arbtest(|u| {
+            check_self_delimiting::<SerdeMsgpack<BTreeMap<String, u8>>, BTreeMap<String, u8>>(u)
+        });
+        // NaN is never equal to itself, so it can't be compared after a round-trip
+        arbtest::arbtest(|u| {
+            check_self_delimiting_with::<SerdeMsgpack<f64>, f64>(u, |u| {
+                let f: f64 = u.arbitrary()?;
+                Ok(if f.is_nan() { 0.0 } else { f })
+            })
+        });
     }
 }

@@ -406,27 +406,45 @@ mod test {
     }
 
     #[test]
-    fn self_delimiting_codecs() {
+    fn integers_are_self_delimiting() {
         use byteorder::{BE, LE, NativeEndian};
 
-        use crate::codec::{I8, I64, U16, U32, U128, assert_self_delimiting};
+        use crate::codec::{I8, I16, I32, I64, I128, U16, U32, U64, U128, check_self_delimiting};
 
-        assert_self_delimiting::<U8>(u8::MAX, u8::MAX);
-        assert_self_delimiting::<I8>(i8::MIN, i8::MIN);
-        assert_self_delimiting::<U16<BE>>(u16::MAX, u16::MAX);
-        assert_self_delimiting::<U32<LE>>(u32::MAX, u32::MAX);
-        assert_self_delimiting::<I64<BE>>(i64::MIN, i64::MIN);
-        assert_self_delimiting::<U128<NativeEndian>>(u128::MAX, u128::MAX);
+        arbtest::arbtest(|u| check_self_delimiting::<U8, u8>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<I8, i8>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<U16<BE>, u16>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<I16<LE>, i16>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<U32<LE>, u32>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<I32<BE>, i32>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<U64<BE>, u64>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<I64<NativeEndian>, i64>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<U128<NativeEndian>, u128>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<I128<BE>, i128>(u));
+    }
 
-        assert_self_delimiting::<&SizedCodec<Str>>("hello", "hello".to_string());
-        assert_self_delimiting::<&SizedCodec<Str>>("", String::new());
-        assert_self_delimiting::<&SizedCodec<Bytes>>(&[1, 2, 3], vec![1, 2, 3]);
-        assert_self_delimiting::<SizedCodec<U8>>(42, 42);
+    #[test]
+    fn sized_codec_is_self_delimiting() {
+        use crate::codec::check_self_delimiting;
 
-        assert_self_delimiting::<ComposeCodec<(U8, U16<BE>)>>((1, 2), (1, 2));
-        assert_self_delimiting::<ComposeCodec<(U8, &SizedCodec<Str>)>>(
-            (1, "hello"),
-            (1, "hello".to_string()),
-        );
+        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<Str>, String>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<Bytes>, Vec<u8>>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<SizedCodec<U8>, u8>(u));
+    }
+
+    #[test]
+    fn compose_codec_is_self_delimiting() {
+        use byteorder::{BE, LE};
+
+        use crate::codec::{U16, U32, check_self_delimiting};
+
+        arbtest::arbtest(|u| check_self_delimiting::<ComposeCodec<(U8,)>, (u8,)>(u));
+        arbtest::arbtest(|u| check_self_delimiting::<ComposeCodec<(U8, U16<BE>)>, (u8, u16)>(u));
+        arbtest::arbtest(|u| {
+            check_self_delimiting::<
+                ComposeCodec<(SizedCodec<U16<BE>>, ComposeCodec<(U8, U32<LE>)>)>,
+                (u16, (u8, u32)),
+            >(u)
+        });
     }
 }
