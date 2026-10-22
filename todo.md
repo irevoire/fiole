@@ -81,28 +81,6 @@ self-contained so it can be picked up independently by an agent or a human.
 > comments + README where relevant). Run `cargo doc --all-features --no-deps`
 > and make sure there are no new warnings.
 
-### T7 Signed integers don't sort numerically as keys
-
-- **Where:** `src/codec/integer.rs` — `I8` and the `define_type!` macro (for
-  `I16`…`I128`).
-- **Context:** they are stored as raw two's complement. Correct for values,
-  but as keys negatives sort *after* positives: with keys `-5..5` in
-  `I32<BE>`, `range(-3..3)` returns nothing and `first_key_value` returns `0`.
-- **Do:** add a doc paragraph on each signed codec: "Encoded as two's
-  complement: when used as a key, negative numbers sort after positive ones.
-  Use [`OrderedI32`] if you need numeric ordering." The macro builds docs
-  with `#[doc = ...]`; add a parameter or a separate `#[doc]` line for signed
-  types. The `Ordered*` codecs live in `src/codec/ordered.rs`.
-
-### T8 Endianness and key ordering
-
-- **Where:** `src/codec/integer.rs` (unsigned multi-byte codecs), `README.md`,
-  and the `codec` module doc (`src/codec/mod.rs`).
-- **Do:** state that only `BigEndian` (`byteorder::BE`) preserves numeric
-  ordering for keys; `LittleEndian`/`NativeEndian` are fine for values. The
-  README example uses `U32<NativeEndian>` as a *value* — keep it, but add a
-  one-line comment saying keys should use `BE`.
-
 ### T9 Document final vs self-delimiting codecs
 
 - **Where:** `src/codec/mod.rs` module doc, and each codec's doc.
@@ -317,7 +295,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T7–T12, T15, T26.
+2. Docs batch T9–T12, T15, T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 

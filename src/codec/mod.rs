@@ -1,4 +1,18 @@
 //! Types that can be used to serialize and deserialize keys or values inside [`crate::Keyspace`]
+//!
+//! # Keys and ordering
+//!
+//! A codec used for values only has to round-trip. A codec used for keys also
+//! decides how they're sorted, since fjall sorts the keys by their encoded bytes:
+//! that's the order used by [`crate::Keyspace::range`], [`crate::Keyspace::iter`]
+//! or [`crate::Keyspace::first_key_value`].
+//!
+//! - [`Str`] and [`Bytes`] sort lexicographically.
+//! - Unsigned integers sort numerically only with [`byteorder::BigEndian`];
+//!   [`byteorder::LittleEndian`] and [`byteorder::NativeEndian`] are bette rsuited for values.
+//! - Signed integers and floats sort numerically with the `Ordered*` codecs,
+//!   like [`OrderedI32`] or [`OrderedF64`].
+//! - [`Terminated`] keeps the order of the codec it wraps, while [`SizedCodec`] doesn't.
 
 use std::convert::Infallible;
 

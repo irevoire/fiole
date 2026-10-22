@@ -24,6 +24,7 @@ use fiole::codec::{Str, U32};
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(&dir.path()).unwrap();
 
+// Any byte order is fine for a value, but `byteorder::BigEndian` is better suited for keys if you want them to be sorted numerically
 let ks: Keyspace<Str, U32<byteorder::NativeEndian>> = db.keyspace("Hey you!", || KeyspaceCreateOptions::default()).unwrap();
 
 // opening a write transaction

@@ -145,12 +145,12 @@ mod test {
     use fjall::KeyspaceCreateOptions;
 
     use crate::{
-        codec::{
-            check_order_preserving, check_round_trip, check_self_delimiting,
-            check_self_delimiting_with, Decode, DecodingVec, Encode, OrderedF32, OrderedF64,
-            OrderedI128, OrderedI16, OrderedI32, OrderedI64, OrderedI8, U8,
-        },
         Database,
+        codec::{
+            Decode, DecodingVec, Encode, OrderedF32, OrderedF64, OrderedI8, OrderedI16, OrderedI32,
+            OrderedI64, OrderedI128, U8, check_order_preserving, check_round_trip,
+            check_self_delimiting, check_self_delimiting_with,
+        },
     };
 
     #[test]
