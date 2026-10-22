@@ -90,9 +90,9 @@ self-contained so it can be picked up independently by an agent or a human.
   `I32<BE>`, `range(-3..3)` returns nothing and `first_key_value` returns `0`.
 - **Do:** add a doc paragraph on each signed codec: "Encoded as two's
   complement: when used as a key, negative numbers sort after positive ones.
-  Use [`OrderedI32`] (T13) if you need numeric ordering." The macro builds docs
+  Use [`OrderedI32`] if you need numeric ordering." The macro builds docs
   with `#[doc = ...]`; add a parameter or a separate `#[doc]` line for signed
-  types. If T13 is not done yet, omit the link and just state the caveat.
+  types. The `Ordered*` codecs live in `src/codec/ordered.rs`.
 
 ### T8 Endianness and key ordering
 
@@ -158,24 +158,6 @@ self-contained so it can be picked up independently by an agent or a human.
 ---
 
 ## 🟢 New codecs for keys
-
-### T13 Order-preserving signed integer codecs
-
-- **Where:** new code in `src/codec/integer.rs` (or a new `ordered.rs`
-  re-exported from `src/codec/mod.rs`).
-- **Do:** add `OrderedI8`, `OrderedI16`, `OrderedI32`, `OrderedI64`,
-  `OrderedI128` (naming open; `SortableI32` also fine). Always big-endian (no
-  byte order parameter). Encoding: flip the sign bit, i.e.
-  `((x as uN) ^ (1 << (BITS-1))).to_be_bytes()`; decoding does the inverse.
-  Self-delimiting (fixed size): implement `SelfDelimiting`. Decode error:
-  `std::io::Error` for consistency with the other integer codecs.
-- **Tests:** `check_self_delimiting` and `check_order_preserving` with
-  arbtest; round-trip `MIN`, `-1`, `0`, `1`, `MAX`; a keyspace test inserting
-  `-5..5` and checking `range(-3..3)` yields 6 keys in order and
-  `first_key_value` is `-5`.
-- **Follow-up (optional):** `OrderedF32`/`OrderedF64` with the IEEE trick (if
-  sign bit set, flip all bits; else flip only the sign bit). Plain `F32`/`F64`
-  codecs don't exist yet either (see T29).
 
 ### T14 Escaped variant of `Terminated` (optional)
 
@@ -308,8 +290,8 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ### T29 Missing features
 
-- No `F32`/`F64` codecs (`byteorder` supports `read_f32`/`write_f32`; the
-  `define_type!` macro can be reused).
+- No plain `F32`/`F64` codecs (`byteorder` supports `read_f32`/`write_f32`; the
+  `define_type!` macro can be reused). `OrderedF32`/`OrderedF64` exist for keys.
 - `Keyspace::prefix` requires a full `Key::Item`, so you can't prefix-search by
   the first fields of a compose key. Idea: `prefix_with::<PrefixCodec>(&rtxn,
   &item)` that encodes with another codec, or a `prefix_raw(&[u8])`. Ask owner.
@@ -335,10 +317,9 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. T13 (new codec) — so the docs can link to it.
-3. Docs batch T7–T12, T15, T26.
-4. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
-5. Nits T25, T27–T30.
+2. Docs batch T7–T12, T15, T26.
+3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
+4. Nits T25, T27–T30.
 
-Dependencies: T7 links to T13; T9 references T10; T16
+Dependencies: T9 references T10; T16
 needs T6; T27's clippy CI job needs T30 first.

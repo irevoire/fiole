@@ -17,6 +17,8 @@ mod lazy;
 pub use lazy::*;
 mod integer;
 pub use integer::*;
+mod ordered;
+pub use ordered::*;
 mod str;
 pub use str::*;
 mod terminated;
