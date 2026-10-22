@@ -78,6 +78,13 @@ impl<'a> DecodingVec<'a> {
         self.cursor.set_position(len as u64);
     }
 
+    /// The bytes left to read, without moving the cursor.
+    pub fn remaining_slice(&self) -> &[u8] {
+        let inner = self.cursor.get_ref();
+        let pos = (self.cursor.position() as usize).min(inner.len());
+        &inner[pos..]
+    }
+
     /// Number of bytes left to read.
     pub fn remaining(&self) -> usize {
         self.cursor

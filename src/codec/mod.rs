@@ -19,6 +19,8 @@ mod integer;
 pub use integer::*;
 mod str;
 pub use str::*;
+mod terminated;
+pub use terminated::*;
 mod unit;
 pub use unit::*;
 #[cfg(any(test, feature = "arbitrary"))]

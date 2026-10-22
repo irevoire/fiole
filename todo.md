@@ -24,102 +24,33 @@ self-contained so it can be picked up independently by an agent or a human.
   `DecodingVec` is a cursor. A codec must read **only its own bytes** so the
   next codec of a `ComposeCodec` can read the rest.
 - **Final vs self-delimiting codecs.** A *final* codec consumes everything up
-  to the end (`Str`, `Bytes`, `LazyDecode`, `Rkyv`, `SerdePostcard`, the
-  `Facet*` codecs…). It can only be the last element of a `ComposeCodec`,
-  unless it is wrapped in `SizedCodec` (u32 BE length prefix). A
-  *self-delimiting* codec knows where it ends (integers, `SizedCodec<_>`,
-  `RoaringBitmapCodec`, `SerdeMsgpack`).
+  to the end (`Str`, `Bytes`, `Unit`, `LazyDecode`, `DecodeIgnore`, `Rkyv`,
+  `SerdeJson`, `SerdePostcard`, the `Facet*` codecs…). It can only be the last
+  element of a `ComposeCodec`, unless it is wrapped in `SizedCodec` (u32 BE
+  length prefix). A *self-delimiting* codec knows where it ends (integers,
+  `SizedCodec<_>`, `ComposeCodec` of self-delimiting codecs, the roaring
+  codecs, `SerdeMsgpack`) and implements the `SelfDelimiting` marker trait
+  (`src/codec/mod.rs`). `ComposeCodec` requires it on every element but the
+  last, so misusing a final codec is a compile error.
+- **Property checks** (`src/codec/property.rs`, built on `arbitrary`, run with
+  `arbtest`): `check_round_trip::<Codec, OwnedItem>` for every codec, and
+  `check_self_delimiting::<Codec, OwnedItem>` for `SelfDelimiting` ones, and
+  `check_order_preserving::<Codec, OwnedItem>` for codecs meant for ordered
+  keys (the `_with` variants take a generator closure). New codecs should be tested with
+  them, e.g. `arbtest::arbtest(check_round_trip::<Str, String>);`.
 - Commands (run from repo root):
   - `cargo test --all-features`
   - `cargo clippy --all-features --all-targets`
   - `cargo doc --all-features --no-deps`
   - `cargo fmt --all` (CI checks formatting)
 - Every bug fix must come with a regression test in the `#[cfg(test)] mod test`
-  of the file being changed. The tests below were used to confirm each bug
-  (marked ✅) and can be reused as-is.
+  of the file being changed. Write it first and check it fails before fixing.
 - Line numbers are those at commit `813d092`; they may drift. Prefer the
   function names.
-
-Legend: ✅ = reproduced with a failing test during the review.
 
 ---
 
 ## 🔴 Bugs (behavior is wrong regardless of key/value usage)
-
-### T1 ✅ `EncodingVec<Dirty>::pop` recurses forever
-
-- **Where:** `src/codec/encoding.rs`, `impl EncodingVec<Dirty>`, `fn pop` (~line 163).
-- **Problem:** the body calls `self.pop()` (itself) instead of `self.vec.pop()`,
-  so any call overflows the stack and aborts the process. The guard is also
-  off by one: `self.vec.len() >= self.start_at` allows popping a byte owned
-  by a previous codec when `len == start_at`.
-- **Fix:**
-  ```rust
-  pub fn pop(&mut self) -> Option<u8> {
-      if self.vec.len() > self.start_at { self.vec.pop() } else { None }
-  }
-  ```
-- **Tests:** pushing one byte then popping returns it and leaves the vec empty;
-  after a prefix written by another codec (e.g. via
-  `ComposeCodec<(U8, MyPopCodec)>`), `pop` on an empty dirty section returns
-  `None` and the prefix is intact.
-
-### T2 ✅ `EncodingVec<Dirty>::resize` computes the wrong length
-
-- **Where:** `src/codec/encoding.rs`, `fn resize` (~line 158).
-- **Problem:** it does
-  `let len = new_len.saturating_sub(self.vec.len()); self.vec.resize(self.start_at + len, value)`.
-  It works only when `start_at == 0`. With a 4-byte prefix, `resize(2)`
-  leaves 4 bytes instead of 6.
-- **Fix:** `self.vec.resize(self.start_at + new_len, value)` (`new_len` is relative,
-  like the other relative methods).
-- **Test:** a custom codec calling `resize(2, 7)`, used as the second element of
-  `ComposeCodec<(U32<BE>, ThatCodec)>`, must produce 6 bytes ending with `[7, 7]`.
-  Also test shrinking: it must never truncate below `start_at`.
-
-### T3 ✅ `SizedCodec` silently accepts truncated data
-
-- **Where:** `src/codec/sized_codec.rs`, `impl Decode for SizedCodec` (~line 57); root
-  cause in `DecodingVec::take_next` (`src/codec/decoding.rs`, ~line 57) which
-  clamps to the available length.
-- **Problem:** bytes `[0,0,0,10,b'h',b'i']` decode as `Ok("hi")` although the
-  header announces 10 bytes. Corrupted data goes undetected.
-- **Fix:** in `SizedCodec::decode`, check that at least `size` bytes remain
-  before calling `take_next`; otherwise return an error. Either add a variant
-  (e.g. `SizedCodecError::Truncated { expected: usize, available: usize }`) or
-  reuse/rename `TooSmall` and update its `Display` message. Consider adding a
-  `DecodingVec::remaining(&self) -> usize` helper. Keep `take_next`'s clamping
-  behavior (or make it return `Option`/`Result` — your call, but update callers).
-- **Test:** the bytes above must return `Err`. The existing `sized` test must still pass.
-
-### T4 ✅ `SerdeJson` reads past its own value
-
-- **Where:** `src/codec/serde_json.rs`, `impl Decode for SerdeJson` (~line 33).
-- **Problem:** `serde_json::Deserializer::from_reader(...).into_iter().next()`
-  must peek one byte after a top-level number to know it ended, and consumes
-  that byte from the `DecodingVec`. So `ComposeCodec<(SerdeJson<u32>, U8)>`
-  encoding `(12, 9)` fails to decode with `UnexpectedEof`. It is also slow
-  (byte-by-byte `Read`).
-- **Fix (recommended):** make it a final codec like the other serde/facet
-  codecs: `serde_json::from_slice(&bytes.consume())`. Add the standard
-  "/!\ This codec is final…" doc line (see T9 for the doc wording). Remove the
-  now-unused `de::Error` import.
-- **Test:** round-trip of a bare number (`SerdeJson<u32>`) and of a struct;
-  `SizedCodec<SerdeJson<u32>>` followed by `U8` in a `ComposeCodec` round-trips.
-
-### T5 ✅ `DecodeIgnore` doesn't advance the cursor
-
-- **Where:** `src/codec/mod.rs`, `impl Decode for DecodeIgnore` (~line 70).
-- **Problem:** it reads nothing, so the next codec in a compose re-reads the same
-  bytes: decoding `[1, 2]` with `ComposeCodec<(DecodeIgnore, U8)>` gives `1`.
-- **Fix:** move the cursor to the end without allocating. Add a helper on
-  `DecodingVec`, e.g. `pub fn skip_to_end(&mut self)` (set cursor position to
-  the inner length), and call it. Document `DecodeIgnore` as final (it ignores
-  everything until the end; to ignore a middle field, wrap it:
-  `SizedCodec<DecodeIgnore>`). Update its doc comment, which currently
-  mentions "a useless allocation" — no longer true once fixed.
-- **Test:** `ComposeCodec<(SizedCodec<DecodeIgnore>, U8)>` decodes the U8
-  correctly; `DecodeIgnore` alone leaves `bytes.is_empty() == true`.
 
 ### T6 `Rkyv` decoding relies on allocator alignment (not reproduced)
 
@@ -127,15 +58,20 @@ Legend: ✅ = reproduced with a failing test during the review.
 - **Problem:** `rkyv::from_bytes` requires a buffer aligned for the archived
   root, but it receives a plain `Vec<u8>` from `consume()`. It works today only
   because the system allocator happens to over-align; another global allocator
-  or a sub-slice copy can make validation fail.
-- **Fix:** copy into `rkyv::util::AlignedVec` (e.g.
-  `let mut aligned = AlignedVec::<16>::new(); aligned.extend_from_slice(&bytes.consume());`)
-  then `rkyv::from_bytes(&aligned)`. While there, replace
-  `ret.extend(bytes.into_iter().copied())` in `encode` by
-  `ret.extend(bytes.iter())` / a slice extend.
-- **Test:** existing `encode_and_decode` test still passes; optionally decode
-  from a deliberately misaligned slice (copy into a `Vec` at offset 1) and
-  check it succeeds.
+  or a sub-slice copy can make validation fail. `from_bytes` validates, so it's an error and never UB. It becomes the common
+  case once T16 decodes straight from fjall's `Slice` (arbitrary offsets), so
+  fix it before or with T16.
+- **Fix:** add `DecodingVec::remaining_slice(&self) -> &[u8]`. In `decode`, if
+  the remaining slice is already 16-aligned, call `rkyv::from_bytes` on it
+  directly (no copy); otherwise copy it into `rkyv::util::AlignedVec::<16>`
+  first. Then `bytes.skip_to_end()`. Document that types needing more than
+  16-byte alignment aren't supported. While there, replace
+  `ret.extend(bytes.into_iter().copied())` in `encode` by a slice extend, and
+  fix the ``[`Sized`]`` doc link (T9).
+- **Test:** it can't fail before the fix (it depends on the global allocator).
+  Add `impl From<&[u8]> for DecodingVec`, then decode a value whose root needs
+  16-byte alignment (e.g. contains a `u128`) from a buffer at every offset
+  `0..16`: at most one of them is aligned, whatever the allocator.
 
 ---
 
@@ -172,28 +108,29 @@ Legend: ✅ = reproduced with a failing test during the review.
 - **Where:** `src/codec/mod.rs` module doc, and each codec's doc.
 - **Do:**
   1. Add a "Composing codecs" section to the module doc explaining final vs
-     self-delimiting codecs (see Context above), and that every element of a
-     `ComposeCodec` except the last must be self-delimiting (wrap final codecs
-     in `SizedCodec`, or use the terminated codec from T14). Show that
-     `ComposeCodec<(Str, Str)>` encodes `("ab","cd")` and decodes as
-     `("abcd", "")`.
+     self-delimiting codecs (see Context above) and the `SelfDelimiting` trait:
+     every element of a `ComposeCodec` except the last must implement it (wrap
+     final codecs in `SizedCodec` or `Terminated`). The
+     `ComposeCodec` and `SelfDelimiting` docs already cover it, link to them.
   2. Fix the broken intra-doc links: ``[`Sized`]`` currently resolves to
-     `std::marker::Sized`. Replace with ``[`SizedCodec`]`` in `bytes.rs`,
+     `std::marker::Sized`. Replace with ``[`SizedCodec`]`` (as `serde_json.rs`
+     and `DecodeIgnore` do) in `bytes.rs`,
      `str.rs`, `rkyv.rs`, `facet_json.rs`, `facet_postcard.rs`,
      `facet_msgpack.rs`.
   3. Add the "final" line to codecs missing it: `LazyDecode`, `SerdePostcard`,
-     `SerdeJson` (after T4), `DecodeIgnore` (after T5), `Unit` (T10).
-  4. Document `ComposeCodec` itself (currently has no doc comment).
-  5. Fix the `Bytes` doc: it says "totally borrowed" but decodes into an owned `Vec<u8>`.
+     `Unit` (T10).
+  4. Fix the `Bytes` doc: it says "totally borrowed" but decodes into an owned `Vec<u8>`.
 
 ### T10 `Unit` is final
 
 - **Where:** `src/codec/unit.rs`.
-- **Context:** `Unit::decode` fails with `NonEmptyError` if any byte remains,
-  so `ComposeCodec<(Unit, U8)>` encodes fine but cannot decode.
+- **Context:** `Unit::decode` fails with `NonEmptyError` if any byte remains.
+  It doesn't implement `SelfDelimiting`, so `ComposeCodec<(Unit, U8)>` doesn't
+  compile anymore.
 - **Do:** document it as final ("must be the last element of a compose; it
   verifies nothing remains"). Behavior stays unchanged — owner decided. Add a
-  test asserting `(U8, Unit)` round-trips.
+  test asserting `(U8, Unit)` round-trips (`check_round_trip::<Unit, ()>`
+  already exists in `unit.rs`).
 
 ### T11 `SizedCodec` doesn't preserve key ordering
 
@@ -202,8 +139,8 @@ Legend: ✅ = reproduced with a failing test during the review.
   and a prefix search on a partial string cannot work. This is expected.
 - **Do:** add a doc comment on `SizedCodec` (there is none) describing the
   format (u32 big-endian length, then the inner bytes), that it's ideal for
-  values / non-ordered keys, and point to the terminated codec (T14) for
-  ordered string keys. Mention the 4 GiB limit (see T25 for the silent
+  values / non-ordered keys, and point to `Terminated` (`src/codec/terminated.rs`)
+  for ordered string keys. Mention the 4 GiB limit (see T25 for the silent
   truncation on encode).
 
 ### T12 Clarify `EncodingVec`'s relative view
@@ -230,41 +167,23 @@ Legend: ✅ = reproduced with a failing test during the review.
   `OrderedI128` (naming open; `SortableI32` also fine). Always big-endian (no
   byte order parameter). Encoding: flip the sign bit, i.e.
   `((x as uN) ^ (1 << (BITS-1))).to_be_bytes()`; decoding does the inverse.
-  Self-delimiting (fixed size). Decode error: `std::io::Error` for consistency
-  with the other integer codecs.
-- **Tests:** round-trip `MIN`, `-1`, `0`, `1`, `MAX`; byte order of encodings
-  matches numeric order for a sorted list of values; a keyspace test inserting
+  Self-delimiting (fixed size): implement `SelfDelimiting`. Decode error:
+  `std::io::Error` for consistency with the other integer codecs.
+- **Tests:** `check_self_delimiting` and `check_order_preserving` with
+  arbtest; round-trip `MIN`, `-1`, `0`, `1`, `MAX`; a keyspace test inserting
   `-5..5` and checking `range(-3..3)` yields 6 keys in order and
   `first_key_value` is `-5`.
 - **Follow-up (optional):** `OrderedF32`/`OrderedF64` with the IEEE trick (if
   sign bit set, flip all bits; else flip only the sign bit). Plain `F32`/`F64`
   codecs don't exist yet either (see T29).
 
-### T14 Terminated (NUL-delimited) string codec
+### T14 Escaped variant of `Terminated` (optional)
 
-- **Where:** new file `src/codec/terminated.rs`, re-exported in `src/codec/mod.rs`.
-- **Goal:** a self-delimiting string codec that preserves lexicographic order,
-  usable anywhere in a `ComposeCodec` key.
-- **Spec:**
-  - Name suggestion: `NulStr` (or `TerminatedStr`). `Item = str`, decodes to `String`.
-  - Encode: write the UTF-8 bytes then `0x00`. If the string contains `\0`,
-    return an error (new error type, e.g. `ContainsNulError { position: usize }`,
-    implementing `Display` + `std::error::Error`). Rust `str` can contain interior
-    NULs, so this check is mandatory.
-  - Decode: read up to the first `0x00`, consume it, return the string.
-    Errors: missing terminator, invalid UTF-8 (one error enum).
-  - Ordering: `"a\0" < "aa\0" < "b\0"` — natural lexicographic order.
-- **Doc caveat to write:** a `prefix` search for every key starting with `"a"`
-  must use the raw prefix *without* the terminator; `ks.prefix(&rtxn, "a")`
-  with this codec only matches the exact key `"a"` (plus whatever follows it in a
-  compose). Mention that the partial-key prefix API (T29) would solve this.
-- **Tests:** round-trip (including empty string and unicode); `\0` input errors;
-  missing terminator errors; `ComposeCodec<(NulStr, NulStr)>` round-trips
-  `("ab","cd")`; keyspace test where `("b",0)` and `("aa",0)` keys iterate in
-  order `"aa"`, `"b"`.
-- **Optional follow-up:** escaped bytes variant for `[u8]` (any byte allowed):
-  encode `0x00` as `0x00 0xFF`, terminate with `0x00 0x00` (FoundationDB tuple
-  layer style). Preserves ordering.
+- **Done:** `Terminated<C, T: Terminator = Nul>` (`src/codec/terminated.rs`)
+  stores ordered string keys; the inner codec can't produce the pattern.
+- **Follow-up (optional):** an escaped variant accepting any byte: encode `0x00`
+  as `00 FF`, terminate with `00 00` (FoundationDB tuple layer style). Keeps
+  the order and never fails to encode, at the cost of a copy when decoding.
 
 ---
 
@@ -287,7 +206,8 @@ Legend: ✅ = reproduced with a failing test during the review.
 - **Do:** avoid the copy. Simplest: at call sites, keep the `Slice` alive and
   decode from `(&slice).into()` (the borrowed `From<&Slice>` impl already
   exists). Check that no lifetime escapes (`Decode::Item` has no lifetime, so
-  it's fine). Optionally make `DecodingVec` hold a `Slice` directly.
+  it's fine). Optionally make `DecodingVec` hold a `Slice` directly. Fix T6
+  first: borrowed slices into fjall's buffers break `Rkyv`'s alignment.
 
 ### T17 Inconsistent error types across `Keyspace` methods
 
@@ -343,15 +263,6 @@ Legend: ✅ = reproduced with a failing test during the review.
   `#[doc(hidden)]`. Document `Readable`'s method. Keep it usable as
   `&impl Readable` in user code.
 
-### T24 (Optional) Compile-time check for final codecs in `ComposeCodec`
-
-- **Where:** `src/codec/compose_codec.rs`, all codecs.
-- **Do:** ask the owner first. Idea: a marker trait `SelfDelimiting` implemented
-  by self-delimiting codecs, required on every element but the last in the
-  `ComposeCodec` impls. Note that the existing test
-  `make_sure_all_tuple_size_support_encoding_and_decoding` uses `(&Str, &Str, …)`,
-  which is the broken pattern; switch it to `SizedCodec<Str>`.
-
 ---
 
 ## ⚪ Minor issues and nitpicks
@@ -392,8 +303,6 @@ Legend: ✅ = reproduced with a failing test during the review.
 
 - `ComposeCodecError1::unwrap_error_1` vs macro-generated `unwrap_C1`, `unwrap_C2`…
   → rename to `unwrap_C1` (breaking; or add an alias).
-- Redundant `$C::Item: Sized` bound in the `Decode` impl of the `compose_impl!`
-  macro (`Decode::Item` is always `Sized`).
 - `Str {}` and `Unit {}` are constructible empty structs while other codecs are
   uninhabited enums → make them `pub enum Str {}` / `pub enum Unit {}`.
 
@@ -407,7 +316,7 @@ Legend: ✅ = reproduced with a failing test during the review.
 
 ### T30 Clippy and cosmetics
 
-- Fix the 21 clippy warnings (`cargo clippy --all-features --all-targets`):
+- Fix the clippy warnings (`cargo clippy --all-features --all-targets`):
   redundant `#[must_use]` on functions returning `Result` (`src/lib.rs`
   `Guard::size/key/value/into_inner`), `.clone()` on `PhantomData` in
   `Keyspace::clone`, needless borrows, elidable lifetimes,
@@ -425,11 +334,11 @@ Legend: ✅ = reproduced with a failing test during the review.
 
 ## Suggested order
 
-1. T1, T2 (one-liners) → T3, T4, T5, T6.
-2. T13, T14 (new codecs) — so the docs can link to them.
+1. T6 (postponed, but needed before T16).
+2. T13 (new codec) — so the docs can link to it.
 3. Docs batch T7–T12, T15, T26.
-4. API tasks T16–T23 (T17, T22, T24 are breaking or need the owner's decision).
+4. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 5. Nits T25, T27–T30.
 
-Dependencies: T7 and T11 link to T13/T14; T9 references T4, T5, T10 and T14;
-T27's clippy CI job needs T30 first.
+Dependencies: T7 links to T13; T9 references T10; T16
+needs T6; T27's clippy CI job needs T30 first.
