@@ -168,7 +168,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// let mut wtxn = db.write_tx().unwrap();
     /// ks.insert(&mut wtxn, "a", "my_value").unwrap();
     /// ks.insert(&mut wtxn, "b", "my_value2").unwrap();
-    /// wtxn.commit().unwrap();
+    /// wtxn.commit().unwrap().unwrap();
     ///
     /// let rtxn = db.read_tx();
     ///
@@ -183,7 +183,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     ///
     /// // From the pov of the write txn the len is updated
     /// assert_eq!(3, ks.len(&wtxn).unwrap(), "hello");
-    /// wtxn.commit().unwrap();
+    /// wtxn.commit().unwrap().unwrap();
     ///
     /// // Once we commit we can still read the old value
     /// assert_eq!(2, ks.len(&rtxn).unwrap());
@@ -235,7 +235,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     /// # let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
     /// let mut wtxn = db.write_tx().unwrap();
     /// ks.insert(&mut wtxn, "a", "my_value").unwrap();
-    /// wtxn.commit().unwrap();
+    /// wtxn.commit().unwrap().unwrap();
     ///
     /// let rtxn = db.read_tx();
     /// let item = ks.get(&rtxn, "a").unwrap();
@@ -243,7 +243,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     ///
     /// let mut wtxn = db.write_tx().unwrap();
     /// ks.insert(&mut wtxn, "b", "my_updated_value").unwrap();
-    /// wtxn.commit().unwrap();
+    /// wtxn.commit().unwrap().unwrap();
     ///
     /// // Repeatable read
     /// let item = ks.get(&rtxn, "a").unwrap();

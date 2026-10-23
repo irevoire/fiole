@@ -96,15 +96,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## 🟡 API and design
 
-### T15 Doc examples ignore commit conflicts
-
-- **Where:** `README.md`, doc examples in `src/database.rs` and `src/keyspace.rs`.
-- **Problem:** `Wtxn::commit` returns `Result<Result<(), Conflict>, fjall::Error>`;
-  examples do `wtxn.commit().unwrap();`, silently dropping a `Conflict`.
-- **Do:** use `wtxn.commit().unwrap().unwrap();` everywhere. Document `commit`
-  explaining both layers. (Alternative, ask owner first: flatten into a single
-  error type.)
-
 ### T16 Every read copies the data
 
 - **Where:** `src/codec/decoding.rs` (`impl From<Slice> for DecodingVec<'static>`
@@ -188,7 +179,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ### T26 Documentation gaps
 
 - `Keyspace::range` has no doc comment (`src/keyspace.rs`).
-- `Wtxn::commit`, `rollback`, `durability` have no docs (`src/txn.rs`).
+- `Wtxn::rollback`, `durability` have no docs (`src/txn.rs`).
 - `serde_msgpack.rs` doc links to `[`msgpack`]`, which doesn't resolve (rustdoc
   warning); use `[msgpack](https://msgpack.org/)` like `facet_msgpack.rs`.
 
@@ -242,7 +233,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T15, T26.
+2. Docs batch T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 

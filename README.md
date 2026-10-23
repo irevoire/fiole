@@ -34,7 +34,7 @@ ks.insert(&mut wtxn, "seven", &7).unwrap();
 ks.insert(&mut wtxn, "zero", &0).unwrap();
 ks.insert(&mut wtxn, "five", &5).unwrap();
 ks.insert(&mut wtxn, "three", &3).unwrap();
-wtxn.commit().unwrap();
+wtxn.commit().unwrap().unwrap();
 
 // opening a read transaction
 // to check if those values are now available

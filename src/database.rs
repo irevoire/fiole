@@ -32,7 +32,7 @@ impl Database {
     ///
     /// let mut wtxn = db.write_tx().unwrap();
     /// ks.insert(&mut wtxn, "Hello", "World").unwrap();
-    /// wtxn.commit().unwrap();
+    /// wtxn.commit().unwrap().unwrap();
     /// ```
     #[inline]
     pub fn write_tx(&self) -> Result<Wtxn, fjall::Error> {
