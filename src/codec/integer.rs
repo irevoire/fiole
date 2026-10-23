@@ -1,6 +1,6 @@
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 #[cfg(doc)]
-use crate::codec::{OrderedI128, OrderedI16, OrderedI32, OrderedI64, OrderedI8};
+use crate::codec::{OrderedI8, OrderedI16, OrderedI32, OrderedI64, OrderedI128};
 use byteorder::{ByteOrder, ReadBytesExt};
 
 use std::convert::Infallible;
