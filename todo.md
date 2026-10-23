@@ -74,14 +74,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ---
 
-## 🟠 Expected behavior that must be documented (no behavior change)
-
-> Do not change any encoding in these tasks. Documentation only (doc
-> comments + README where relevant). Run `cargo doc --all-features --no-deps`
-> and make sure there are no new warnings.
-
----
-
 ## 🟢 New codecs for keys
 
 ### T14 Escaped variant of `Terminated` (optional)
@@ -176,13 +168,6 @@ self-contained so it can be picked up independently by an agent or a human.
   bound; drop the useless `#[derive(Default)]` (`src/codec/lazy.rs`).
 - `EncodingVec::append(Vec<u8>)` → also add/replace with `extend_from_slice(&[u8])`.
 
-### T26 Documentation gaps
-
-- `Keyspace::range` has no doc comment (`src/keyspace.rs`).
-- `Wtxn::rollback`, `durability` have no docs (`src/txn.rs`).
-- `serde_msgpack.rs` doc links to `[`msgpack`]`, which doesn't resolve (rustdoc
-  warning); use `[msgpack](https://msgpack.org/)` like `facet_msgpack.rs`.
-
 ### T27 Cargo / CI hygiene
 
 - `facet-format` is a dependency enabled by the facet features but never used
@@ -233,9 +218,8 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T26.
-3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
-4. Nits T25, T27–T30.
+2. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
+3. Nits T25, T27–T30.
 
 Dependencies: T16
 needs T6; T27's clippy CI job needs T30 first.

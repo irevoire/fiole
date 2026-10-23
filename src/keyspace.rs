@@ -8,9 +8,9 @@ use std::{
 };
 
 use crate::{
-    Error, Guard, Iter, Wtxn,
     codec::{Decode, Encode},
     txn::Readable,
+    Error, Guard, Iter, Wtxn,
 };
 
 /// Wrapper around a [`fjall::OptimisticTxKeyspace`].
@@ -324,6 +324,33 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
         rtxn.inner().size_of(&self.inner, key).map_err(Error::Fjall)
     }
 
+    /// Returns an iterator over the key-value pairs whose key is in `range`.
+    ///
+    /// A typed version of [`fjall::Readable::range`]. The bounds are encoded
+    /// with the key codec and the keys are compared by their encoded bytes.
+    /// See [the ordering section](crate::codec#keys-and-ordering) of the codecs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedI32, Unit}};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder.path()).unwrap();
+    /// let ks = db.keyspace::<OrderedI32, Unit>("numbers", KeyspaceCreateOptions::default).unwrap();
+    ///
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// for n in -5..5 {
+    ///     ks.insert(&mut wtxn, &n, &()).unwrap();
+    /// }
+    ///
+    /// let keys: Vec<i32> = ks
+    ///     .range(&wtxn, &(-3..3))
+    ///     .unwrap()
+    ///     .map(|guard| guard.key().unwrap())
+    ///     .collect();
+    /// assert_eq!(keys, [-3, -2, -1, 0, 1, 2]);
+    /// ```
     #[inline]
     pub fn range<R: RangeBounds<Key::Item>>(
         &self,

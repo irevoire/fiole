@@ -7,6 +7,25 @@ pub struct Wtxn {
 }
 
 impl Wtxn {
+    /// Sets how the transaction is persisted to disk when it's committed.
+    ///
+    /// With `None`, the default, committing doesn't wait for the data to be
+    /// flushed: it's persisted later, and the last commits can be lost in a
+    /// crash. With `Some(mode)`, committing flushes the journal with the given
+    /// [`PersistMode`], which is slower but durable.
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
+    /// use fjall::PersistMode;
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder.path()).unwrap();
+    /// # let ks = db.keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default).unwrap();
+    ///
+    /// let mut wtxn = db.write_tx().unwrap().durability(Some(PersistMode::SyncAll));
+    /// ks.insert(&mut wtxn, "important", "data").unwrap();
+    /// wtxn.commit().unwrap().unwrap();
+    /// ```
     #[inline]
     pub fn durability(self, mode: Option<PersistMode>) -> Wtxn {
         Wtxn {
@@ -46,6 +65,24 @@ impl Wtxn {
         self.inner.commit()
     }
 
+    /// Discards all the writes of the transaction.
+    ///
+    /// Dropping the transaction without committing it does the same, this is a
+    /// more explicit alternative.
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder.path()).unwrap();
+    /// # let ks = db.keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default).unwrap();
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// ks.insert(&mut wtxn, "hello", "world").unwrap();
+    /// wtxn.rollback();
+    ///
+    /// let rtxn = db.read_tx();
+    /// assert_eq!(ks.get(&rtxn, "hello").unwrap(), None);
+    /// ```
     #[inline]
     pub fn rollback(self) {
         self.inner.rollback()
