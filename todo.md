@@ -103,16 +103,6 @@ self-contained so it can be picked up independently by an agent or a human.
   it's fine). Optionally make `DecodingVec` hold a `Slice` directly. Fix T6
   first: borrowed slices into fjall's buffers break `Rkyv`'s alignment.
 
-### T18 Make `Error` more usable
-
-- **Where:** `src/error.rs`.
-- **Do:** add `impl From<fjall::Error>`; implement `source()` returning the
-  inner error; prefix `Display` with context (`"key codec error: …"`,
-  `"value codec error: …"`); relax `Display` bounds to `Display` instead of
-  `StdError`; make `unwrap_fjall` include the variant in its panic message
-  (requires `Debug` bounds; or add `fjall_error(self) -> Option<fjall::Error>`
-  as a non-panicking alternative).
-
 ### T22 `Database::builder` is not a builder
 
 - **Where:** `src/database.rs`.
@@ -184,7 +174,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. API tasks T16, T18, T22 (T22 needs the owner's decision).
+2. API tasks T16, T22 (T22 needs the owner's decision).
 3. Nits T25, T27–T30.
 
 Dependencies: T16
