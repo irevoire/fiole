@@ -80,17 +80,6 @@ self-contained so it can be picked up independently by an agent or a human.
 > comments + README where relevant). Run `cargo doc --all-features --no-deps`
 > and make sure there are no new warnings.
 
-### T10 `Unit` is final
-
-- **Where:** `src/codec/unit.rs`.
-- **Context:** `Unit::decode` fails with `NonEmptyError` if any byte remains.
-  It doesn't implement `SelfDelimiting`, so `ComposeCodec<(Unit, U8)>` doesn't
-  compile anymore.
-- **Do:** document it as final ("must be the last element of a compose; it
-  verifies nothing remains"). Behavior stays unchanged — owner decided. Add a
-  test asserting `(U8, Unit)` round-trips (`check_round_trip::<Unit, ()>`
-  already exists in `unit.rs`).
-
 ### T11 `SizedCodec` doesn't preserve key ordering
 
 - **Where:** `src/codec/sized_codec.rs`.
@@ -276,7 +265,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T10–T12, T15, T26.
+2. Docs batch T11, T12, T15, T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 
