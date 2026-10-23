@@ -122,6 +122,19 @@ impl Database {
     }
 
     /// Gets a list of all keyspace names in the database.
+    ///
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
+    /// use fiole::byteview::StrView;
+    ///
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder.path()).unwrap();
+    /// db.keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default).unwrap();
+    ///
+    /// let names: Vec<StrView> = db.list_keyspace_names();
+    /// assert_eq!(&*names[0], "hello");
+    /// ```
     #[inline]
     pub fn list_keyspace_names(&self) -> Vec<StrView> {
         self.inner.list_keyspace_names()
@@ -154,7 +167,7 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::{Database, KeyspaceCreateOptions, codec::Str};
+    use crate::{codec::Str, Database, KeyspaceCreateOptions};
 
     #[test]
     fn clones_share_the_same_database() {

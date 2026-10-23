@@ -43,6 +43,10 @@ self-contained so it can be picked up independently by an agent or a human.
   - `cargo clippy --all-features --all-targets`
   - `cargo doc --all-features --no-deps`
   - `cargo fmt --all` (CI checks formatting)
+- **`Keyspace` error types are deliberately precise** (owner decision): each
+  method only returns the errors it can produce (`Key::Error` alone for
+  `range`/`prefix`/`remove`, `Error<_, Infallible>` for `contains_key`/`size_of`,
+  `fjall::Error` for `len`/`is_empty`). Don't unify them.
 - Every bug fix must come with a regression test in the `#[cfg(test)] mod test`
   of the file being changed. Write it first and check it fails before fixing.
 - Line numbers are those at commit `813d092`; they may drift. Prefer the
@@ -99,14 +103,6 @@ self-contained so it can be picked up independently by an agent or a human.
   it's fine). Optionally make `DecodingVec` hold a `Slice` directly. Fix T6
   first: borrowed slices into fjall's buffers break `Rkyv`'s alignment.
 
-### T17 Inconsistent error types across `Keyspace` methods
-
-- **Where:** `src/keyspace.rs`.
-- **Problem:** `range`, `prefix`, `remove` return a bare `Key::Error`; `get`,
-  `contains_key`, `size_of`, `insert`, `take` return `Error<K, V>`.
-- **Do:** make them return `Error<Key::Error, Infallible>` like `contains_key`.
-  Breaking change — note it in the changelog/commit.
-
 ### T18 Make `Error` more usable
 
 - **Where:** `src/error.rs`.
@@ -116,14 +112,6 @@ self-contained so it can be picked up independently by an agent or a human.
   `StdError`; make `unwrap_fjall` include the variant in its panic message
   (requires `Debug` bounds; or add `fjall_error(self) -> Option<fjall::Error>`
   as a non-panicking alternative).
-
-### T19 `byteview::StrView` is exposed but not re-exported
-
-- **Where:** `src/database.rs` (`list_keyspace_names`), `Cargo.toml`, `src/lib.rs`.
-- **Problem:** if `fjall` moves to another `byteview` version, users get type mismatches.
-- **Do:** either `pub use byteview;` from `lib.rs` (or `pub use fjall::…` if
-  fjall re-exports it), or return `Vec<String>`. Owner preference unknown — prefer
-  re-export (non-breaking).
 
 ### T22 `Database::builder` is not a builder
 
@@ -196,7 +184,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. API tasks T16–T22 (T17 and T22 are breaking or need the owner's decision).
+2. API tasks T16, T18, T22 (T22 needs the owner's decision).
 3. Nits T25, T27–T30.
 
 Dependencies: T16

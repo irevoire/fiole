@@ -15,6 +15,7 @@ pub use keyspace::Keyspace;
 pub use txn::{Rtxn, Wtxn};
 
 pub use byteorder;
+pub use byteview;
 pub use fjall;
 
 /// Guard to access key-value pairs.
