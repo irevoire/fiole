@@ -24,7 +24,7 @@ self-contained so it can be picked up independently by an agent or a human.
   `DecodingVec` is a cursor. A codec must read **only its own bytes** so the
   next codec of a `ComposeCodec` can read the rest.
 - **Final vs self-delimiting codecs.** A *final* codec consumes everything up
-  to the end (`Str`, `Bytes`, `Unit`, `LazyDecode`, `DecodeIgnore`, `Rkyv`,
+  to the end (`Str`, `Bytes`, `Unit`, `LazyDecode`, `DecodeIgnore`,
   `SerdeJson`, `SerdePostcard`, the `Facet*` codecs…). It can only be the last
   element of a `ComposeCodec`, unless it is wrapped in `SizedCodec` (u32 BE
   length prefix). A *self-delimiting* codec knows where it ends (integers,
@@ -54,30 +54,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ---
 
-## 🔴 Bugs (behavior is wrong regardless of key/value usage)
-
-### T6 `Rkyv` decoding relies on allocator alignment (not reproduced)
-
-- **Where:** `src/codec/rkyv.rs`, `impl Decode for Rkyv` (~line 52).
-- **Problem:** `rkyv::from_bytes` requires a buffer aligned for the archived
-  root, but it receives a plain `Vec<u8>` from `consume()`. It works today only
-  because the system allocator happens to over-align; another global allocator
-  or a sub-slice copy can make validation fail. `from_bytes` validates, so it's an error and never UB. It becomes the common
-  case once T16 decodes straight from fjall's `Slice` (arbitrary offsets), so
-  fix it before or with T16.
-- **Fix:** add `DecodingVec::remaining_slice(&self) -> &[u8]`. In `decode`, if
-  the remaining slice is already 16-aligned, call `rkyv::from_bytes` on it
-  directly (no copy); otherwise copy it into `rkyv::util::AlignedVec::<16>`
-  first. Then `bytes.skip_to_end()`. Document that types needing more than
-  16-byte alignment aren't supported. While there, replace
-  `ret.extend(bytes.into_iter().copied())` in `encode` by a slice extend.
-- **Test:** it can't fail before the fix (it depends on the global allocator).
-  Add `impl From<&[u8]> for DecodingVec`, then decode a value whose root needs
-  16-byte alignment (e.g. contains a `u128`) from a buffer at every offset
-  `0..16`: at most one of them is aligned, whatever the allocator.
-
----
-
 ## 🟢 New codecs for keys
 
 ### T14 Escaped variant of `Terminated` (optional)
@@ -100,8 +76,7 @@ self-contained so it can be picked up independently by an agent or a human.
 - **Do:** avoid the copy. Simplest: at call sites, keep the `Slice` alive and
   decode from `(&slice).into()` (the borrowed `From<&Slice>` impl already
   exists). Check that no lifetime escapes (`Decode::Item` has no lifetime, so
-  it's fine). Optionally make `DecodingVec` hold a `Slice` directly. Fix T6
-  first: borrowed slices into fjall's buffers break `Rkyv`'s alignment.
+  it's fine). Optionally make `DecodingVec` hold a `Slice` directly.
 
 ### T22 `Database::builder` is not a builder
 
@@ -156,11 +131,9 @@ self-contained so it can be picked up independently by an agent or a human.
 - Fix the clippy warnings (`cargo clippy --all-features --all-targets`):
   redundant `#[must_use]` on functions returning `Result` (`src/lib.rs`
   `Guard::size/key/value/into_inner`), `.clone()` on `PhantomData` in
-  `Keyspace::clone`, needless borrows, elidable lifetimes,
-  `bytes.into_iter()` → `bytes.iter()` in `rkyv.rs`, redundant
+  `Keyspace::clone`, needless borrows, elidable lifetimes, redundant
   `.map_err(Into::into)` in `integer.rs`, redundant closures, complex types.
-- `#[repr(transparent)]` on `Database`, `Keyspace`, `Wtxn`, `Rtxn` serves no
-  purpose → remove.
+- `#[repr(transparent)]` on `Keyspace` serves no purpose → remove.
 - Typos: "parkeyspacetition" (`src/keyspace.rs`, `is_empty` doc), "informations"
   (`src/lib.rs`), "availabe" and "got rids" (`README.md`).
 - `len` doc test has leftover assertion messages `"hello"`/`"world"`;
@@ -171,9 +144,7 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## Suggested order
 
-1. T6 (postponed, but needed before T16).
-2. API tasks T16, T22 (T22 needs the owner's decision).
-3. Nits T25, T27–T30.
+1. API tasks T16, T22 (T22 needs the owner's decision).
+2. Nits T25, T27–T30.
 
-Dependencies: T16
-needs T6; T27's clippy CI job needs T30 first.
+Dependencies: T27's clippy CI job needs T30 first.

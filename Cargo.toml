@@ -28,7 +28,6 @@ rmp-serde = { version = "1", optional = true }
 roaring = { version = "0.11", optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
-rkyv = { version = "0.8.18", optional = true }
 seq-macro = "0.3.6"
 paste = "1.0.15"
 
@@ -42,7 +41,6 @@ serde_json = ["dep:serde_json", "serde"]
 serde_postcard = ["postcard", "serde"]
 serde_msgpack = ["rmp-serde", "serde"]
 roaring = ["dep:roaring"]
-rkyv = ["dep:rkyv"]
 
 [dev-dependencies]
 arbitrary = { version = "1.5.0", features = ["derive"] }

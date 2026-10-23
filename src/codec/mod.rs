@@ -24,7 +24,7 @@
 //!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Unit`],
-//!   [`LazyDecode`], [`DecodeIgnore`], and the other serde, facet and rkyv codecs.
+//!   [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
 //!
 //! Every element of a [`ComposeCodec`] except the last one must be
 //! self-delimiting: using a final codec anywhere else is a compile error. To
@@ -105,10 +105,6 @@ pub use serde_msgpack::*;
 mod roaring;
 #[cfg(feature = "roaring")]
 pub use roaring::*;
-#[cfg(feature = "rkyv")]
-mod rkyv;
-#[cfg(feature = "rkyv")]
-pub use rkyv::*;
 
 /// Marker trait for the codecs that know where their own bytes end.
 ///
