@@ -125,12 +125,6 @@ self-contained so it can be picked up independently by an agent or a human.
   fjall re-exports it), or return `Vec<String>`. Owner preference unknown — prefer
   re-export (non-breaking).
 
-### T21 `Database` should be `Clone` and `Debug`
-
-- **Where:** `src/database.rs`.
-- **Do:** `#[derive(Clone)]` (fjall's `OptimisticTxDatabase` is a cheap handle — verify it
-  implements `Clone`). Add `Debug` if the inner type allows it, else a manual impl.
-
 ### T22 `Database::builder` is not a builder
 
 - **Where:** `src/database.rs`.

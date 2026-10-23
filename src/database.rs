@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::Path};
+use std::{fmt, marker::PhantomData, path::Path};
 
 use byteview::StrView;
 use fjall::{KeyspaceCreateOptions, OptimisticTxDatabase, PersistMode};
@@ -6,9 +6,21 @@ use fjall::{KeyspaceCreateOptions, OptimisticTxDatabase, PersistMode};
 use crate::{Keyspace, Rtxn, Wtxn};
 
 /// Wrapper around a [`fjall::OptimisticTxDatabase`].
-#[repr(transparent)]
+///
+/// Cloning it is cheap: all the clones are handles to the same database.
+#[derive(Clone)]
 pub struct Database {
     inner: OptimisticTxDatabase,
+}
+
+impl fmt::Debug for Database {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let names = self.inner.list_keyspace_names();
+        let keyspaces: Vec<&str> = names.iter().map(|name| &**name).collect();
+        f.debug_struct("Database")
+            .field("keyspaces", &keyspaces)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Database {
@@ -137,5 +149,44 @@ impl Database {
     #[inline]
     pub fn disk_space(&self) -> Result<u64, fjall::Error> {
         self.inner.disk_space()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{Database, KeyspaceCreateOptions, codec::Str};
+
+    #[test]
+    fn clones_share_the_same_database() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::builder(dir.path()).unwrap();
+        let clone = db.clone();
+
+        let ks = db
+            .keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default)
+            .unwrap();
+        let mut wtxn = db.write_tx().unwrap();
+        ks.insert(&mut wtxn, "hello", "world").unwrap();
+        wtxn.commit().unwrap().unwrap();
+
+        let ks = clone
+            .keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default)
+            .unwrap();
+        let rtxn = clone.read_tx();
+        assert_eq!(ks.get(&rtxn, "hello").unwrap().as_deref(), Some("world"));
+    }
+
+    #[test]
+    fn debug() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::builder(dir.path()).unwrap();
+        assert_eq!(format!("{db:?}"), r#"Database { keyspaces: [], .. }"#);
+
+        db.keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default)
+            .unwrap();
+        assert_eq!(
+            format!("{db:?}"),
+            r#"Database { keyspaces: ["hello"], .. }"#
+        );
     }
 }
