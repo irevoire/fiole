@@ -9,10 +9,43 @@
 //!
 //! - [`Str`] and [`Bytes`] sort lexicographically.
 //! - Unsigned integers sort numerically only with [`byteorder::BigEndian`];
-//!   [`byteorder::LittleEndian`] and [`byteorder::NativeEndian`] are bette rsuited for values.
+//!   [`byteorder::LittleEndian`] and [`byteorder::NativeEndian`] are better suited for values.
 //! - Signed integers and floats sort numerically with the `Ordered*` codecs,
 //!   like [`OrderedI32`] or [`OrderedF64`].
 //! - [`Terminated`] keeps the order of the codec it wraps, while [`SizedCodec`] doesn't.
+//!
+//! # Composing codecs
+//!
+//! A [`ComposeCodec`] encodes a tuple by writing the encoding of each element
+//! one after the other. To decode it back, each codec must know where its own
+//! bytes end:
+//!
+//! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
+//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], a
+//!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
+//! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Unit`],
+//!   [`LazyDecode`], [`DecodeIgnore`], and the other serde, facet and rkyv codecs.
+//!
+//! Every element of a [`ComposeCodec`] except the last one must be
+//! self-delimiting: using a final codec anywhere else is a compile error. To
+//! put a final codec anywhere, wrap it:
+//!
+//! - [`SizedCodec`] writes the length of the inner codec on 4 bytes before it.
+//!   It works with every codec, but doesn't keep the order of the keys.
+//! - [`Terminated`] writes a pattern after the inner codec, a single `0x00` byte by
+//!   default. It keeps the order of the keys, but can't encode a value whose
+//!   encoding contains the pattern, like a string containing `\0`.
+//!
+//! ```
+//! use fiole::codec::{Bytes, ComposeCodec, Decode, DecodingVec, Encode, OrderedI32, Str, Terminated};
+//!
+//! // A name, a signed number, then raw bytes: only the last element can be final.
+//! type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedI32, &'a Bytes)>;
+//!
+//! let bytes = Key::encode_alloc(&("alice", -3, &[1, 2][..])).unwrap().finish();
+//! let decoded = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
+//! assert_eq!(decoded, ("alice".to_string(), -3, vec![1, 2]));
+//! ```
 
 use std::convert::Infallible;
 
@@ -85,7 +118,7 @@ pub use rkyv::*;
 /// last one must implement this trait.
 ///
 /// Codecs that don't implement it are *final*: they decode everything till the
-/// end. Wrap them in a [`SizedCodec`] to make them self-delimiting.
+/// end. Wrap them in a [`SizedCodec`] or a [`Terminated`] to make them self-delimiting.
 ///
 /// Only implement it on your own codec if its [`Decode::decode`] never reads
 /// past the bytes written by its [`Encode::encode`], whatever bytes follow.
@@ -100,8 +133,8 @@ pub enum Unspecified {}
 /// Can be useful when working with [`crate::Guard`], but keep in mind that the bytes are still copied out of fjall before being ignored.
 /// Ideally, you should use the [`crate::Keyspace::contains_key`] or [`crate::Keyspace::size_of`] methods instead.
 ///
-/// /!\ This codec is final: It ignores everything till the end and can't be used with other codec if it's not being wrapped in a [`SizedCodec`] codec.
-/// To ignore a field in the middle of a [`ComposeCodec`], use `SizedCodec<DecodeIgnore>`.
+/// /!\ This codec is final: it ignores everything till the end, so it can only be the last element of a [`ComposeCodec`].
+/// To ignore a field in the middle of a [`ComposeCodec`], wrap it like the field it ignores, e.g. `SizedCodec<DecodeIgnore>` or `Terminated<DecodeIgnore>`.
 ///
 /// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Decode, DecodeIgnore, DecodingVec, U8};

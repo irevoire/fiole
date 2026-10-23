@@ -2,8 +2,10 @@ use std::convert::Infallible;
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
-/// Describes a byte slice `[u8]` that is totally borrowed and doesn't depend on any memory alignment.
-/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
+/// Describes a byte slice `[u8]`. The bytes are stored as they are, without length or terminator,
+/// and decoded into an owned `Vec<u8>`.
+///
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub enum Bytes {}
 
 impl Encode for Bytes {

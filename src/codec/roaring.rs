@@ -3,6 +3,8 @@ use roaring::{RoaringBitmap, RoaringTreemap};
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
 /// Encode a roaring bitmap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
+///
+/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
 pub enum RoaringBitmapCodec {}
 
 impl SelfDelimiting for RoaringBitmapCodec {}
@@ -31,6 +33,8 @@ impl Decode for RoaringBitmapCodec {
 }
 
 /// Encode a roaring treemap with [the standard on-disk format](https://github.com/RoaringBitmap/RoaringFormatSpec).
+///
+/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
 pub enum RoaringTreemapCodec {}
 
 impl SelfDelimiting for RoaringTreemapCodec {}

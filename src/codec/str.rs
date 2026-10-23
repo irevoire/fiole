@@ -3,7 +3,8 @@ use std::{convert::Infallible, string::FromUtf8Error};
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Describe a raw string without len or termination byte.
-/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
+///
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub struct Str {}
 
 impl Encode for Str {

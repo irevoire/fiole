@@ -6,7 +6,8 @@ use facet_json::DeserializeError;
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Encode a struct as json through the [`facet::Facet`] trait.
-/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
+///
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub struct FacetJson<T>(PhantomData<T>);
 
 impl<'a, T: Facet<'a>> Encode for FacetJson<T> {

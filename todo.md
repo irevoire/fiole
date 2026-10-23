@@ -66,8 +66,7 @@ self-contained so it can be picked up independently by an agent or a human.
   directly (no copy); otherwise copy it into `rkyv::util::AlignedVec::<16>`
   first. Then `bytes.skip_to_end()`. Document that types needing more than
   16-byte alignment aren't supported. While there, replace
-  `ret.extend(bytes.into_iter().copied())` in `encode` by a slice extend, and
-  fix the ``[`Sized`]`` doc link (T9).
+  `ret.extend(bytes.into_iter().copied())` in `encode` by a slice extend.
 - **Test:** it can't fail before the fix (it depends on the global allocator).
   Add `impl From<&[u8]> for DecodingVec`, then decode a value whose root needs
   16-byte alignment (e.g. contains a `u128`) from a buffer at every offset
@@ -80,24 +79,6 @@ self-contained so it can be picked up independently by an agent or a human.
 > Do not change any encoding in these tasks. Documentation only (doc
 > comments + README where relevant). Run `cargo doc --all-features --no-deps`
 > and make sure there are no new warnings.
-
-### T9 Document final vs self-delimiting codecs
-
-- **Where:** `src/codec/mod.rs` module doc, and each codec's doc.
-- **Do:**
-  1. Add a "Composing codecs" section to the module doc explaining final vs
-     self-delimiting codecs (see Context above) and the `SelfDelimiting` trait:
-     every element of a `ComposeCodec` except the last must implement it (wrap
-     final codecs in `SizedCodec` or `Terminated`). The
-     `ComposeCodec` and `SelfDelimiting` docs already cover it, link to them.
-  2. Fix the broken intra-doc links: ``[`Sized`]`` currently resolves to
-     `std::marker::Sized`. Replace with ``[`SizedCodec`]`` (as `serde_json.rs`
-     and `DecodeIgnore` do) in `bytes.rs`,
-     `str.rs`, `rkyv.rs`, `facet_json.rs`, `facet_postcard.rs`,
-     `facet_msgpack.rs`.
-  3. Add the "final" line to codecs missing it: `LazyDecode`, `SerdePostcard`,
-     `Unit` (T10).
-  4. Fix the `Bytes` doc: it says "totally borrowed" but decodes into an owned `Vec<u8>`.
 
 ### T10 `Unit` is final
 
@@ -295,9 +276,9 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T9–T12, T15, T26.
+2. Docs batch T10–T12, T15, T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 
-Dependencies: T9 references T10; T16
+Dependencies: T16
 needs T6; T27's clippy CI job needs T30 first.

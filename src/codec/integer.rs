@@ -7,6 +7,8 @@ use std::convert::Infallible;
 use std::marker::PhantomData;
 
 /// Encodable version of [`u8`].
+///
+/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
 pub enum U8 {}
 
 impl Encode for U8 {
@@ -35,6 +37,8 @@ impl Decode for U8 {
 impl SelfDelimiting for U8 {}
 
 /// Encodable version of [`i8`].
+///
+/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
 ///
 /// Encoded as two's complement.
 /// /!\ Be careful, when used as a key, negative numbers sort
@@ -71,6 +75,8 @@ macro_rules! define_type {
         #[doc = "Encodable version of [`"]
         #[doc = stringify!($native)]
         #[doc = "`]."]
+        ///
+        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
         ///
         /// /!\ When used as a key: only [`BigEndian`](byteorder::BigEndian) sorts like you would expect.
         /// [`LittleEndian`](byteorder::LittleEndian) and [`NativeEndian`](byteorder::NativeEndian)

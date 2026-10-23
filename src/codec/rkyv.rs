@@ -15,7 +15,8 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct with the rkyv format. Caution, this is not zerocopy.
 /// - `T` is the type you want to encode.
 /// - `E` is the error type that'll be returned by rkyv. It must implements the [`rkyv::rancor::Source`] trait.
-/// /!\ This codec is final: It decode everything till the end and can't be used with other codec if it's not being wrapped in a [`Sized`] codec.
+///
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub struct Rkyv<T, E>(PhantomData<(T, E)>);
 
 impl<T, E> Encode for Rkyv<T, E>
