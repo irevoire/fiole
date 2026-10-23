@@ -12,7 +12,7 @@ pub use database::Database;
 pub use error::Error;
 pub use fjall::{Conflict, KeyspaceCreateOptions, PersistMode};
 pub use keyspace::Keyspace;
-pub use txn::{Readable, Rtxn, Wtxn};
+pub use txn::{Rtxn, Wtxn};
 
 pub use byteorder;
 pub use fjall;

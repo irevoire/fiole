@@ -139,16 +139,6 @@ self-contained so it can be picked up independently by an agent or a human.
   `open()`; keep `Database::open(path)` as a shortcut. The existing doc comment
   already says "In the future it should return a [`fjall::DatabaseBuilder`]".
 
-### T23 Seal the `Readable` trait
-
-- **Where:** `src/txn.rs`.
-- **Do:** use the sealed trait pattern (`mod private { pub trait Sealed {} }`,
-  `pub trait Readable: private::Sealed + Send + Sync`) and make `inner()`
-  `#[doc(hidden)]`. Document `Readable`'s method. Keep it usable as
-  `&impl Readable` in user code.
-
----
-
 ## ⚪ Minor issues and nitpicks
 
 ### T25 Small correctness/API nits in codecs
@@ -212,7 +202,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
+2. API tasks T16–T22 (T17 and T22 are breaking or need the owner's decision).
 3. Nits T25, T27–T30.
 
 Dependencies: T16

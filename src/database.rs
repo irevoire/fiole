@@ -36,9 +36,7 @@ impl Database {
     /// ```
     #[inline]
     pub fn write_tx(&self) -> Result<Wtxn, fjall::Error> {
-        Ok(Wtxn {
-            inner: self.inner.write_tx()?,
-        })
+        Ok(Wtxn::new(self.inner.write_tx()?))
     }
 
     /// Starts a new read-only transaction (a.k.a. [`fjall::Snapshot`]).
@@ -57,9 +55,7 @@ impl Database {
     /// ```
     #[inline]
     pub fn read_tx(&self) -> Rtxn {
-        Rtxn {
-            inner: self.inner.read_tx(),
-        }
+        Rtxn::new(self.inner.read_tx())
     }
 
     /// Flushes the active journal. The durability depends on the PersistMode used.

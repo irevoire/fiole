@@ -8,9 +8,8 @@ use std::{
 };
 
 use crate::{
+    Error, Guard, Iter, Rtxn, Wtxn,
     codec::{Decode, Encode},
-    txn::Readable,
-    Error, Guard, Iter, Wtxn,
 };
 
 /// Wrapper around a [`fjall::OptimisticTxKeyspace`].
@@ -99,7 +98,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// assert_eq!("a", &*ks.first_key_value(&mut wtxn).unwrap().key().unwrap());
     /// ```
     #[inline]
-    pub fn first_key_value(&self, rtxn: &impl Readable) -> Option<Guard<Key, Value>> {
+    pub fn first_key_value(&self, rtxn: &Rtxn) -> Option<Guard<Key, Value>> {
         rtxn.inner().first_key_value(&self.inner).map(Guard::new)
     }
 
@@ -121,7 +120,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// assert_eq!("b", &*ks.last_key_value(&mut wtxn).unwrap().key().unwrap());
     /// ```
     #[inline]
-    pub fn last_key_value(&self, rtxn: &impl Readable) -> Option<Guard<Key, Value>> {
+    pub fn last_key_value(&self, rtxn: &Rtxn) -> Option<Guard<Key, Value>> {
         rtxn.inner().last_key_value(&self.inner).map(Guard::new)
     }
 
@@ -144,7 +143,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// assert!(!ks.is_empty(&wtxn).unwrap());
     /// ```
     #[inline]
-    pub fn is_empty(&self, rtxn: &impl Readable) -> Result<bool, fjall::Error> {
+    pub fn is_empty(&self, rtxn: &Rtxn) -> Result<bool, fjall::Error> {
         rtxn.inner().is_empty(&self.inner)
     }
 
@@ -160,7 +159,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// # Examples
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
@@ -193,7 +192,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// assert_eq!(3, ks.len(&rtxn2).unwrap(), "world");
     /// ```
     #[inline]
-    pub fn len(&self, rtxn: &impl Readable) -> Result<usize, fjall::Error> {
+    pub fn len(&self, rtxn: &Rtxn) -> Result<usize, fjall::Error> {
         rtxn.inner().len(&self.inner)
     }
 
@@ -217,7 +216,7 @@ impl<Key, Value> Keyspace<Key, Value> {
     /// assert_eq!(3, ks.iter(&wtxn).count());
     /// ```
     #[inline]
-    pub fn iter(&self, rtxn: &impl Readable) -> Iter<Key, Value> {
+    pub fn iter(&self, rtxn: &Rtxn) -> Iter<Key, Value> {
         Iter::new(rtxn.inner().iter(&self.inner))
     }
 }
@@ -252,7 +251,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     #[inline]
     pub fn get(
         &self,
-        rtxn: &impl Readable,
+        rtxn: &Rtxn,
         key: &Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
@@ -268,7 +267,7 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
     /// Removes an item and returns its value if it existed.
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
     /// # use std::sync::Arc;
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
@@ -290,7 +289,11 @@ impl<Key: Encode, Value: Decode> Keyspace<Key, Value> {
         key: &Key::Item,
     ) -> Result<Option<Value::Item>, Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
-        match wtxn.inner.take(&self.inner, key).map_err(Error::Fjall)? {
+        match wtxn
+            .write_inner()
+            .take(&self.inner, key)
+            .map_err(Error::Fjall)?
+        {
             Some(value) => Value::decode(&mut value.into())
                 .map(Some)
                 .map_err(Error::Value),
@@ -304,7 +307,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     #[inline]
     pub fn contains_key(
         &self,
-        rtxn: &impl Readable,
+        rtxn: &Rtxn,
         key: &Key::Item,
     ) -> Result<bool, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
@@ -317,7 +320,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     #[inline]
     pub fn size_of(
         &self,
-        rtxn: &impl Readable,
+        rtxn: &Rtxn,
         key: &Key::Item,
     ) -> Result<Option<u32>, Error<Key::Error, Infallible>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
@@ -354,7 +357,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     #[inline]
     pub fn range<R: RangeBounds<Key::Item>>(
         &self,
-        rtxn: &impl Readable,
+        rtxn: &Rtxn,
         range: &R,
     ) -> Result<Iter<Key, Value>, Key::Error> {
         let start = match range.start_bound() {
@@ -373,11 +376,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
 
     /// A typed version of [`fjall::Readable::prefix`], see the original documentation for more infos.
     #[inline]
-    pub fn prefix(
-        &self,
-        rtxn: &impl Readable,
-        prefix: &Key::Item,
-    ) -> Result<Iter<Key, Value>, Key::Error> {
+    pub fn prefix(&self, rtxn: &Rtxn, prefix: &Key::Item) -> Result<Iter<Key, Value>, Key::Error> {
         let prefix = Key::encode_alloc(prefix)?.finish();
 
         Ok(Iter::new(rtxn.inner().prefix(&self.inner, prefix)))
@@ -391,7 +390,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     /// # Examples
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
@@ -406,7 +405,7 @@ impl<Key: Encode, Value> Keyspace<Key, Value> {
     #[inline]
     pub fn remove(&self, wtxn: &mut Wtxn, key: &Key::Item) -> Result<(), Key::Error> {
         let key = Key::encode_alloc(key)?.finish();
-        wtxn.inner.remove(&self.inner, key);
+        wtxn.write_inner().remove(&self.inner, key);
         Ok(())
     }
 }
@@ -422,7 +421,7 @@ impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
     /// # Examples
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, Readable, codec::Str};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
@@ -441,7 +440,7 @@ impl<Key: Encode, Value: Encode> Keyspace<Key, Value> {
     ) -> Result<(), Error<Key::Error, Value::Error>> {
         let key = Key::encode_alloc(key).map_err(Error::Key)?.finish();
         let value = Value::encode_alloc(value).map_err(Error::Value)?.finish();
-        wtxn.inner.insert(&self.inner, key, value);
+        wtxn.write_inner().insert(&self.inner, key, value);
         Ok(())
     }
 }
