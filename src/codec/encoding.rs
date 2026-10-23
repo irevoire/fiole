@@ -38,9 +38,56 @@ where
     }
 }
 
+/// State of an [`EncodingVec`] that's ready to be given to the next codec.
+///
+/// Only the methods that read the buffer are available. Call
+/// [`EncodingVec::edit`] to write into it.
 pub enum Fresh {}
+
+/// State of an [`EncodingVec`] that's being written by a codec.
+///
+/// Call [`EncodingVec::make_fresh`] once the codec is done writing, before
+/// returning it from [`Encode::encode`].
 pub enum Dirty {}
 
+/// The buffer every codec writes its bytes into.
+///
+/// The same buffer is passed from one codec to the next one, for example
+/// between the elements of a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// Each codec only sees its own bytes: the ones written by the previous
+/// codecs can't be read or modified.
+///
+/// ```
+/// use fiole::codec::{Encode, Str};
+///
+/// let vec = Str::encode_alloc("hello").unwrap();
+/// assert_eq!(vec.len(), 0);
+/// assert_eq!(format!("{vec:?}"), "[]");
+/// assert_eq!(vec.finish(), b"hello");
+/// ```
+///
+/// A codec writes its bytes like this:
+///
+/// ```
+/// use std::convert::Infallible;
+/// use fiole::codec::{Encode, EncodingVec, Fresh};
+///
+/// /// Encodes a bool on a single byte.
+/// enum Bool {}
+///
+/// impl Encode for Bool {
+///     type Item = bool;
+///     type Error = Infallible;
+///
+///     fn encode(into: EncodingVec<Fresh>, item: &bool) -> Result<EncodingVec<Fresh>, Infallible> {
+///         let mut ret = into.edit();
+///         ret.push(*item as u8);
+///         Ok(ret.make_fresh())
+///     }
+/// }
+///
+/// assert_eq!(Bool::encode_alloc(&true).unwrap().finish(), [1]);
+/// ```
 pub struct EncodingVec<T> {
     pub(crate) vec: Vec<u8>,
     start_at: usize,
@@ -68,40 +115,52 @@ impl<T> AsRef<[u8]> for EncodingVec<T> {
 }
 
 impl<T> EncodingVec<T> {
+    /// Returns the whole buffer, including the bytes of the previous codecs.
     pub fn finish(self) -> Vec<u8> {
         self.vec
     }
 
+    /// The bytes written by the current codec.
     pub fn as_slice(&self) -> &[u8] {
         self.deref()
     }
 
+    /// Number of bytes written by the current codec.
     pub fn len(&self) -> usize {
         self.vec.len() - self.start_at
     }
 
+    /// Whether the current codec wrote nothing yet.
     pub fn is_empty(self) -> bool {
         self.vec.len() == self.start_at
     }
 
+    /// Converts the whole buffer into a fjall [`Slice`].
     pub fn into_fjall_slice(self) -> Slice {
         Slice::from(self.vec)
     }
 
+    /// Converts the whole buffer into a [`DecodingVec`] to decode it.
     pub fn into_decoding_vec(self) -> DecodingVec<'static> {
         DecodingVec::new(self.vec)
     }
 
+    /// Length of the whole buffer, including the bytes of the previous codecs.
+    ///
+    /// Useful to measure how many bytes a sub-codec wrote, by comparing the
+    /// position before and after calling it.
     pub fn absolute_pos(&self) -> usize {
         self.vec.len()
     }
 
+    /// Gives back the space reserved by [`EncodingVec::save_space_for_later`], to fill it.
     pub fn retrieve_space(&mut self, token: SpaceToken) -> &mut [u8] {
         &mut self.vec[token.pos..token.pos + token.size]
     }
 }
 
 impl EncodingVec<Fresh> {
+    /// Starts writing the bytes of the current codec.
     pub fn edit(self) -> EncodingVec<Dirty> {
         EncodingVec {
             vec: self.vec,
@@ -119,46 +178,69 @@ impl EncodingVec<Fresh> {
     }
 }
 
+/// Space reserved by [`EncodingVec::save_space_for_later`], to be filled with
+/// [`EncodingVec::retrieve_space`] once its content is known.
+///
+/// [`SizedCodec`](crate::codec::SizedCodec) uses it to write the length of the
+/// inner codec before its bytes.
 pub struct SpaceToken {
     pos: usize,
     size: usize,
 }
 
 impl EncodingVec<Dirty> {
+    /// Appends a byte at the end.
     pub fn push(&mut self, byte: u8) {
         self.vec.push(byte);
     }
 
+    /// Appends all the bytes of `other` at the end.
     pub fn append(&mut self, mut other: Vec<u8>) {
         self.vec.append(&mut other)
     }
 
+    /// Inserts a byte at `index` in the bytes of the current codec.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index > len`.
     pub fn insert(&mut self, index: usize, element: u8) {
         self.vec.insert(index + self.start_at, element)
     }
 
+    /// Removes and returns the byte at `index` in the bytes of the current codec.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index >= len`.
     pub fn remove(&mut self, index: usize) -> u8 {
         self.vec.remove(index + self.start_at)
     }
 
+    /// Appends `size` bytes set to `fill_with`, and returns a token to fill them
+    /// later with [`EncodingVec::retrieve_space`].
     pub fn save_space_for_later(&mut self, size: usize, fill_with: u8) -> SpaceToken {
         let pos = self.vec.len();
         self.vec.resize(pos + size, fill_with);
         SpaceToken { pos, size }
     }
 
+    /// Reserves capacity for at least `additional` more bytes.
     pub fn reserve(&mut self, additional: usize) {
         self.vec.reserve(additional)
     }
 
+    /// Removes the bytes of the current codec, the previous codecs ones stays untouched.
     pub fn clear(&mut self) {
         self.vec.truncate(self.start_at)
     }
 
+    /// Resizes the bytes of the current codec to `new_len`, filling with `value`.
     pub fn resize(&mut self, new_len: usize, value: u8) {
         self.vec.resize(self.start_at + new_len, value)
     }
 
+    /// Removes and returns the last byte of the current codec, or `None` if it wrote nothing.
     pub fn pop(&mut self) -> Option<u8> {
         if self.vec.len() > self.start_at {
             self.vec.pop()
@@ -167,6 +249,8 @@ impl EncodingVec<Dirty> {
         }
     }
 
+    /// Ends the writing of the current codec. The returned vec starts a new,
+    /// empty, view for the next codec.
     pub fn make_fresh(self) -> EncodingVec<Fresh> {
         EncodingVec {
             start_at: self.vec.len(),
@@ -204,7 +288,7 @@ mod test {
 
     use byteorder::BE;
 
-    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8, U32};
+    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U32, U8};
 
     #[test]
     fn pop() {

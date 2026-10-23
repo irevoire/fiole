@@ -80,18 +80,6 @@ self-contained so it can be picked up independently by an agent or a human.
 > comments + README where relevant). Run `cargo doc --all-features --no-deps`
 > and make sure there are no new warnings.
 
-### T12 Clarify `EncodingVec`'s relative view
-
-- **Where:** `src/codec/encoding.rs`.
-- **Context:** `len`, `Deref`, `as_slice`, `AsRef` and `Debug` only cover the
-  bytes after `start_at`. Since every `encode` returns a `Fresh` vec with
-  `start_at == len`, `Str::encode_alloc("hello").unwrap().len() == 0` and it
-  prints `[]`, while `finish()`/`into_fjall_slice()` return everything.
-- **Do:** document the type (`EncodingVec`, `Fresh`, `Dirty`, `SpaceToken`
-  have no docs) and each method, stating which are relative and which are
-  absolute. Recommended small API improvement (ask owner before doing it):
-  make `Debug` print the whole buffer, or add `full_slice()`.
-
 ---
 
 ## 🟢 New codecs for keys
@@ -254,7 +242,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T12, T15, T26.
+2. Docs batch T15, T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 
