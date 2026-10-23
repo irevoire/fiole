@@ -6,6 +6,8 @@ pub mod codec;
 mod database;
 mod error;
 mod keyspace;
+#[cfg(test)]
+mod test_alloc;
 pub(crate) mod txn;
 
 pub use database::Database;
@@ -62,7 +64,7 @@ impl<Key: codec::Decode, Value> Guard<Key, Value> {
     #[must_use]
     pub fn key(self) -> Result<Key::Item, Error<Key::Error, Infallible>> {
         let key = self.0.key().map_err(Error::Fjall)?;
-        Key::decode(&mut key.into()).map_err(Error::Key)
+        Key::decode(&mut (&key).into()).map_err(Error::Key)
     }
 }
 
@@ -72,7 +74,7 @@ impl<Key, Value: codec::Decode> Guard<Key, Value> {
     #[must_use]
     pub fn value(self) -> Result<Value::Item, Error<Infallible, Value::Error>> {
         let value = self.0.value().map_err(Error::Fjall)?;
-        Value::decode(&mut value.into()).map_err(Error::Value)
+        Value::decode(&mut (&value).into()).map_err(Error::Value)
     }
 }
 
@@ -83,8 +85,8 @@ impl<Key: codec::Decode, Value: codec::Decode> Guard<Key, Value> {
     pub fn into_inner(self) -> Result<(Key::Item, Value::Item), Error<Key::Error, Value::Error>> {
         let (k, v) = self.0.into_inner().map_err(Error::Fjall)?;
         Ok((
-            Key::decode(&mut k.into()).map_err(Error::Key)?,
-            Value::decode(&mut v.into()).map_err(Error::Value)?,
+            Key::decode(&mut (&k).into()).map_err(Error::Key)?,
+            Value::decode(&mut (&v).into()).map_err(Error::Value)?,
         ))
     }
 }
@@ -175,5 +177,53 @@ mod test {
         let rtxn = database.read_tx();
         let ret: Vec<_> = ks.range(&rtxn, &(4..=5)).unwrap().collect();
         assert_eq!(ret.len(), 2);
+    }
+
+    /// Panics if it's given bytes that have been copied out of fjall.
+    enum AssertBorrowed {}
+
+    impl crate::codec::Decode for AssertBorrowed {
+        type Item = ();
+        type Error = std::convert::Infallible;
+
+        fn decode(bytes: &mut crate::codec::DecodingVec) -> Result<(), Self::Error> {
+            assert!(bytes.is_borrowed(), "the bytes were copied out of fjall");
+            bytes.skip_to_end();
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn reads_borrow_the_bytes_of_fjall() {
+        let dir = tempfile::tempdir().unwrap();
+        let database = Database::builder(dir.path()).unwrap();
+        let ks = database
+            .keyspace::<U8, Str>("hello", KeyspaceCreateOptions::default)
+            .unwrap();
+
+        let long = "a value longer than the 20 bytes fjall stores inline";
+        let mut wtxn = database.write_tx().unwrap();
+        ks.insert(&mut wtxn, &1, "short").unwrap();
+        ks.insert(&mut wtxn, &2, long).unwrap();
+        wtxn.commit().unwrap().unwrap();
+
+        let values = ks.remap_value_type::<AssertBorrowed>();
+        let both = ks.remap_types::<AssertBorrowed, AssertBorrowed>();
+
+        let rtxn = database.read_tx();
+        values.get(&rtxn, &1).unwrap().unwrap();
+        values.get(&rtxn, &2).unwrap().unwrap();
+        for guard in both.iter(&rtxn) {
+            guard.key().unwrap();
+        }
+        for guard in both.iter(&rtxn) {
+            guard.value().unwrap();
+        }
+        for guard in both.iter(&rtxn) {
+            guard.into_inner().unwrap();
+        }
+
+        let mut wtxn = database.write_tx().unwrap();
+        values.take(&mut wtxn, &2).unwrap().unwrap();
     }
 }

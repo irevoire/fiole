@@ -58,7 +58,9 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
     type Error = serde_json::Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        serde_json::from_slice(&bytes.consume())
+        let ret = serde_json::from_slice(bytes.remaining_slice());
+        bytes.skip_to_end();
+        ret
     }
 }
 
@@ -149,5 +151,11 @@ mod test {
         arbtest::arbtest(check_round_trip::<SerdeJson<Example>, Example>);
         arbtest::arbtest(check_round_trip::<SerdeJson<String>, String>);
         arbtest::arbtest(check_round_trip::<SerdeJson<i64>, i64>);
+    }
+
+    #[test]
+    fn decodes_without_copying() {
+        crate::test_alloc::assert_decodes_without_allocating::<SerdeJson<u32>>(&42);
+        crate::test_alloc::assert_decodes_without_allocating::<SerdeJson<bool>>(&true);
     }
 }

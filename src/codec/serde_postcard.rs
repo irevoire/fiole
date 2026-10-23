@@ -28,7 +28,9 @@ impl<T: DeserializeOwned> Decode for SerdePostcard<T> {
     type Error = postcard::Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        postcard::from_bytes(&bytes.consume())
+        let ret = postcard::from_bytes(bytes.remaining_slice());
+        bytes.skip_to_end();
+        ret
     }
 }
 
@@ -80,5 +82,11 @@ mod test {
         arbtest::arbtest(check_round_trip::<SerdePostcard<Example>, Example>);
         arbtest::arbtest(check_round_trip::<SerdePostcard<String>, String>);
         arbtest::arbtest(check_round_trip::<SerdePostcard<i64>, i64>);
+    }
+
+    #[test]
+    fn decodes_without_copying() {
+        crate::test_alloc::assert_decodes_without_allocating::<SerdePostcard<u32>>(&42);
+        crate::test_alloc::assert_decodes_without_allocating::<SerdePostcard<bool>>(&true);
     }
 }

@@ -195,4 +195,14 @@ mod test {
         assert_eq!(SizedCodec::<Str>::decode(&mut decoder).unwrap(), "");
         assert!(decoder.is_empty());
     }
+
+    #[test]
+    fn decodes_without_copying() {
+        use byteorder::BE;
+
+        use crate::codec::{Terminated, U32, Unit};
+
+        crate::test_alloc::assert_decodes_without_allocating::<SizedCodec<U32<BE>>>(&42);
+        crate::test_alloc::assert_decodes_without_allocating::<Terminated<Unit>>(&());
+    }
 }

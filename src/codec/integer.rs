@@ -236,4 +236,16 @@ mod test {
         assert!(encode(-1.0) > encode(1.0)); // negative numbers sort after the positive ones
         assert!(encode(-2.0) > encode(-1.0)); // and in reverse order
     }
+
+    #[test]
+    fn decodes_without_copying() {
+        use crate::codec::{I16, OrderedF64, OrderedI64, U8, U32};
+
+        crate::test_alloc::assert_decodes_without_allocating::<U8>(&7);
+        crate::test_alloc::assert_decodes_without_allocating::<U32<BE>>(&42);
+        crate::test_alloc::assert_decodes_without_allocating::<I16<LE>>(&-3);
+        crate::test_alloc::assert_decodes_without_allocating::<F64<BE>>(&1.5);
+        crate::test_alloc::assert_decodes_without_allocating::<OrderedI64>(&-42);
+        crate::test_alloc::assert_decodes_without_allocating::<OrderedF64>(&-1.5);
+    }
 }

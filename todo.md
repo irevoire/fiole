@@ -68,16 +68,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## 🟡 API and design
 
-### T16 Every read copies the data
-
-- **Where:** `src/codec/decoding.rs` (`impl From<Slice> for DecodingVec<'static>`
-  does `value.to_vec()`); callers in `src/keyspace.rs` (`get`, `take`) and
-  `src/lib.rs` (`Guard::key/value/into_inner`).
-- **Do:** avoid the copy. Simplest: at call sites, keep the `Slice` alive and
-  decode from `(&slice).into()` (the borrowed `From<&Slice>` impl already
-  exists). Check that no lifetime escapes (`Decode::Item` has no lifetime, so
-  it's fine). Optionally make `DecodingVec` hold a `Slice` directly.
-
 ### T22 `Database::builder` is not a builder
 
 - **Where:** `src/database.rs`.
@@ -144,7 +134,7 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## Suggested order
 
-1. API tasks T16, T22 (T22 needs the owner's decision).
+1. API task T22 (needs the owner's decision).
 2. Nits T25, T27–T30.
 
 Dependencies: T27's clippy CI job needs T30 first.

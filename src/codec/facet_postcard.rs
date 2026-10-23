@@ -28,7 +28,9 @@ impl<T: Facet<'static>> Decode for FacetPostcard<T> {
     type Error = facet_postcard::DeserializeError;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        facet_postcard::from_slice(&bytes.consume())
+        let ret = facet_postcard::from_slice(bytes.remaining_slice());
+        bytes.skip_to_end();
+        ret
     }
 }
 
@@ -92,5 +94,11 @@ mod test {
         arbtest::arbtest(check_round_trip::<FacetPostcard<Example>, Example>);
         arbtest::arbtest(check_round_trip::<FacetPostcard<String>, String>);
         arbtest::arbtest(check_round_trip::<FacetPostcard<i64>, i64>);
+    }
+
+    #[test]
+    fn decodes_without_copying() {
+        crate::test_alloc::assert_decodes_without_copying::<FacetPostcard<u32>>(&42);
+        crate::test_alloc::assert_decodes_without_copying::<FacetPostcard<bool>>(&true);
     }
 }

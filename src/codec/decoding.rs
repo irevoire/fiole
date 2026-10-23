@@ -93,7 +93,12 @@ impl<'a> DecodingVec<'a> {
             .saturating_sub(self.cursor.position() as usize)
     }
 
-    /// Useful when your codec is going to consume everything till the end.
+    /// Useful when your codec is going to consume everything till the end
+    /// and needs to own the bytes.
+    ///
+    /// When the bytes are borrowed (e.g. straight from fjall), this copies
+    /// them. If your codec only needs to read them, use [`DecodingVec::remaining_slice`]
+    /// followed by [`DecodingVec::skip_to_end`] instead.
     pub fn consume(&mut self) -> Vec<u8> {
         let cursor = std::mem::take(&mut self.cursor);
         let pos = cursor.position() as usize;
@@ -104,6 +109,14 @@ impl<'a> DecodingVec<'a> {
                 vec
             }
         }
+    }
+}
+
+#[cfg(test)]
+impl DecodingVec<'_> {
+    /// Whether the bytes are borrowed rather than copied.
+    pub(crate) fn is_borrowed(&self) -> bool {
+        matches!(self.cursor.get_ref(), Cow::Borrowed(_))
     }
 }
 
