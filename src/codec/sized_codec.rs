@@ -4,6 +4,37 @@ use byteorder::ByteOrder;
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 
+/// Makes any codec [`SelfDelimiting`] by prefixing it by its length.
+///
+/// The format is the length of the inner codec's bytes as a big-endian `u32`
+/// on 4 bytes, followed by those bytes. Unlike [`Terminated`](crate::codec::Terminated),
+/// it works whatever bytes the inner codec writes. Values whose encoding is
+/// bigger than 4 GiB aren't supported.
+///
+/// ```
+/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Str, U8};
+///
+/// type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8)>;
+///
+/// let bytes = Codec::encode_alloc(&("hi", 7)).unwrap().finish();
+/// assert_eq!(bytes, [0, 0, 0, 2, b'h', b'i', 7]);
+/// let decoded = Codec::decode(&mut DecodingVec::new(bytes)).unwrap();
+/// assert_eq!(decoded, ("hi".to_string(), 7));
+/// ```
+///
+/// It's ideal for values and for keys whose order doesn't matter.
+///
+/// /!\ Since the length comes first, the keys are sorted by length before
+/// their content: `"b"` sorts before `"aa"`, and a prefix search on the
+/// beginning of a string can't work. Use [`Terminated`](crate::codec::Terminated) for ordered string keys.
+///
+/// ```
+/// use fiole::codec::{Encode, SizedCodec, Str};
+///
+/// let b = SizedCodec::<Str>::encode_alloc("b").unwrap().finish();
+/// let aa = SizedCodec::<Str>::encode_alloc("aa").unwrap().finish();
+/// assert!(b < aa);
+/// ```
 pub struct SizedCodec<C>(PhantomData<C>);
 
 impl<C> SelfDelimiting for SizedCodec<C> {}

@@ -80,17 +80,6 @@ self-contained so it can be picked up independently by an agent or a human.
 > comments + README where relevant). Run `cargo doc --all-features --no-deps`
 > and make sure there are no new warnings.
 
-### T11 `SizedCodec` doesn't preserve key ordering
-
-- **Where:** `src/codec/sized_codec.rs`.
-- **Context:** because of the u32 length prefix, `"b"` sorts before `"aa"`,
-  and a prefix search on a partial string cannot work. This is expected.
-- **Do:** add a doc comment on `SizedCodec` (there is none) describing the
-  format (u32 big-endian length, then the inner bytes), that it's ideal for
-  values / non-ordered keys, and point to `Terminated` (`src/codec/terminated.rs`)
-  for ordered string keys. Mention the 4 GiB limit (see T25 for the silent
-  truncation on encode).
-
 ### T12 Clarify `EncodingVec`'s relative view
 
 - **Where:** `src/codec/encoding.rs`.
@@ -265,7 +254,7 @@ self-contained so it can be picked up independently by an agent or a human.
 ## Suggested order
 
 1. T6 (postponed, but needed before T16).
-2. Docs batch T11, T12, T15, T26.
+2. Docs batch T12, T15, T26.
 3. API tasks T16–T23 (T17 and T22 are breaking or need the owner's decision).
 4. Nits T25, T27–T30.
 
