@@ -273,7 +273,7 @@ impl fjall::Readable for ReadTx {
 
 #[cfg(test)]
 mod test {
-    use crate::{codec::Str, Database, Keyspace, KeyspaceCreateOptions, Rtxn};
+    use crate::{Database, Keyspace, KeyspaceCreateOptions, Rtxn, codec::Str};
 
     fn setup() -> (tempfile::TempDir, Database, Keyspace<Str, Str>) {
         let dir = tempfile::tempdir().unwrap();

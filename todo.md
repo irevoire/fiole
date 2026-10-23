@@ -147,8 +147,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ### T29 Missing features
 
-- No plain `F32`/`F64` codecs (`byteorder` supports `read_f32`/`write_f32`; the
-  `define_type!` macro can be reused). `OrderedF32`/`OrderedF64` exist for keys.
 - `Keyspace::prefix` requires a full `Key::Item`, so you can't prefix-search by
   the first fields of a compose key. Idea: `prefix_with::<PrefixCodec>(&rtxn,
   &item)` that encodes with another codec, or a `prefix_raw(&[u8])`. Ask owner.

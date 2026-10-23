@@ -167,7 +167,7 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::{codec::Str, Database, KeyspaceCreateOptions};
+    use crate::{Database, KeyspaceCreateOptions, codec::Str};
 
     #[test]
     fn clones_share_the_same_database() {

@@ -288,7 +288,7 @@ mod test {
 
     use byteorder::BE;
 
-    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U32, U8};
+    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8, U32};
 
     #[test]
     fn pop() {
