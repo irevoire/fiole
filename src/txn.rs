@@ -16,7 +16,7 @@ impl Wtxn {
     ///
     /// ```
     /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
-    /// use fjall::PersistMode;
+    /// use fiole::PersistMode;
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder.path()).unwrap();
@@ -58,7 +58,7 @@ impl Wtxn {
     /// second.commit().unwrap().unwrap();
     ///
     /// ks.insert(&mut first, "counter", "1").unwrap();
-    /// assert!(first.commit().unwrap().is_err());
+    /// assert!(matches!(first.commit().unwrap(), Err(fiole::Conflict)));
     /// ```
     #[inline]
     pub fn commit(self) -> Result<Result<(), Conflict>, fjall::Error> {

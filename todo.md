@@ -125,12 +125,6 @@ self-contained so it can be picked up independently by an agent or a human.
   fjall re-exports it), or return `Vec<String>`. Owner preference unknown — prefer
   re-export (non-breaking).
 
-### T20 Re-export `PersistMode` and `Conflict`
-
-- **Where:** `src/lib.rs`.
-- **Do:** `pub use fjall::{Conflict, PersistMode};` next to the existing
-  `KeyspaceCreateOptions` re-export. Optionally `pub use fjall;`.
-
 ### T21 `Database` should be `Clone` and `Debug`
 
 - **Where:** `src/database.rs`.

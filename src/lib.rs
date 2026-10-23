@@ -10,11 +10,12 @@ pub(crate) mod txn;
 
 pub use database::Database;
 pub use error::Error;
-pub use fjall::KeyspaceCreateOptions;
+pub use fjall::{Conflict, KeyspaceCreateOptions, PersistMode};
 pub use keyspace::Keyspace;
 pub use txn::{Readable, Rtxn, Wtxn};
 
 pub use byteorder;
+pub use fjall;
 
 /// Guard to access key-value pairs.
 pub struct Guard<Key, Value>(fjall::Guard, PhantomData<(Key, Value)>);
