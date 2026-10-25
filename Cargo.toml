@@ -2,7 +2,8 @@
 name = "fiole"
 version = "0.2.0"
 edition = "2024"
-description = "An opinionated wrapper around fjall "
+rust-version = "1.90"
+description = "An opinionated wrapper around fjall"
 documentation = "https://docs.rs/fiole"
 repository = "https://github.com/irevoire/fiole"
 authors = ["Tamo <irevoire@hotmail.fr>"]
@@ -17,8 +18,7 @@ rustdoc-args = ["--generate-link-to-definition"]
 arbitrary = { version = "1.5.0", optional = true }
 byteorder = "1.5.0"
 byteview = "0.10.2"
-facet = { version = "0.46", features = ["jiff02", "uuid"], optional = true }
-facet-format = { version = "0.47", optional = true }
+facet = { version = "0.46", optional = true }
 facet-json = { version = "0.46", optional = true }
 facet-postcard = { version = "0.46", optional = true }
 facet-msgpack = { version = "0.46", optional = true }
@@ -34,9 +34,12 @@ paste = "1.0.15"
 [features]
 default = []
 arbitrary = ["dep:arbitrary"]
-facet_json = ["facet-json", "facet-format", "facet"]
-facet_postcard = ["facet-postcard", "facet-format", "facet"]
-facet_msgpack = ["facet-msgpack", "facet-format", "facet"]
+facet_json = ["facet-json", "facet"]
+facet_postcard = ["facet-postcard", "facet"]
+facet_msgpack = ["facet-msgpack", "facet"]
+# Support for `jiff` 0.2 and `uuid` types in the facet codecs
+jiff02 = ["facet?/jiff02"]
+uuid = ["facet?/uuid"]
 serde_json = ["dep:serde_json", "serde"]
 serde_postcard = ["postcard", "serde"]
 serde_msgpack = ["rmp-serde", "serde"]
