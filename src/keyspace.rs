@@ -284,7 +284,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// ks.insert(&mut wtxn, "a", "my_value").unwrap();
     /// ks.insert(&mut wtxn, "b", "my_value").unwrap();
     ///
-    /// assert_eq!("a", &*ks.first_key_value(&mut wtxn).unwrap().key().unwrap());
+    /// assert_eq!("a", &*ks.first_key_value(&wtxn).unwrap().key().unwrap());
     /// ```
     #[inline]
     pub fn first_key_value(&self, rtxn: &Rtxn) -> Option<Guard<Key, Value>> {
@@ -311,7 +311,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// ks.insert(&mut wtxn, "a", "my_value").unwrap();
     /// ks.insert(&mut wtxn, "b", "my_value").unwrap();
     ///
-    /// assert_eq!("b", &*ks.last_key_value(&mut wtxn).unwrap().key().unwrap());
+    /// assert_eq!("b", &*ks.last_key_value(&wtxn).unwrap().key().unwrap());
     /// ```
     #[inline]
     pub fn last_key_value(&self, rtxn: &Rtxn) -> Option<Guard<Key, Value>> {
@@ -389,7 +389,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// assert_eq!(2, ks.len(&rtxn).unwrap());
     ///
     /// // From the pov of the write txn the len is updated
-    /// assert_eq!(3, ks.len(&wtxn).unwrap(), "hello");
+    /// assert_eq!(3, ks.len(&wtxn).unwrap());
     /// wtxn.commit().unwrap().unwrap();
     ///
     /// // Once we commit we can still read the old value
@@ -397,7 +397,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     ///
     /// // Or the new value if we take a rtxn
     /// let rtxn2 = db.read_tx();
-    /// assert_eq!(3, ks.len(&rtxn2).unwrap(), "world");
+    /// assert_eq!(3, ks.len(&rtxn2).unwrap());
     /// ```
     #[inline]
     pub fn len(&self, rtxn: &Rtxn) -> Result<usize, fjall::Error> {
@@ -479,6 +479,10 @@ impl<Key: Encode, Value: Decode, Kind> Keyspace<Key, Value, Kind> {
     /// Panics if the prefix followed by the encoded key is longer than
     /// 65535 bytes, the maximum key size of fjall.
     #[inline]
+    #[expect(
+        clippy::type_complexity,
+        reason = "spelling out the precise error types is deliberate"
+    )]
     pub fn get(
         &self,
         rtxn: &Rtxn,
@@ -518,6 +522,10 @@ impl<Key: Encode, Value: Decode, Kind> Keyspace<Key, Value, Kind> {
     /// Panics if the prefix followed by the encoded key is longer than
     /// 65535 bytes, the maximum key size of fjall.
     #[inline]
+    #[expect(
+        clippy::type_complexity,
+        reason = "spelling out the precise error types is deliberate"
+    )]
     pub fn take(
         &self,
         wtxn: &mut Wtxn,
@@ -538,7 +546,7 @@ impl<Key: Encode, Value: Decode, Kind> Keyspace<Key, Value, Kind> {
 }
 
 impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
-    /// A typed version of [`fjall::Readable::contains_key`], see the original documentation for more infos.
+    /// A typed version of [`fjall::Readable::contains_key`], see the original documentation for more information.
     ///
     /// # Panics
     ///
@@ -556,7 +564,7 @@ impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
             .map_err(Error::Fjall)
     }
 
-    /// A typed version of [`fjall::Readable::size_of`], see the original documentation for more infos.
+    /// A typed version of [`fjall::Readable::size_of`], see the original documentation for more information.
     ///
     /// # Panics
     ///
@@ -629,7 +637,7 @@ impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
         Ok(Iter::new(iter, self.prefix.len()))
     }
 
-    /// A typed version of [`fjall::Readable::prefix`], see the original documentation for more infos.
+    /// A typed version of [`fjall::Readable::prefix`], see the original documentation for more information.
     ///
     /// # Panics
     ///

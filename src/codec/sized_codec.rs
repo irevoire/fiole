@@ -164,7 +164,7 @@ mod test {
         // === Without the sized codec
 
         // With the normal codec all the bytes are put one after the other with no size in between
-        let buf = Str::encode_alloc(&letter).unwrap();
+        let buf = Str::encode_alloc(letter).unwrap();
         let buf = Bytes::encode(buf, &number).unwrap();
         let ret = buf.into_decoding_vec().consume();
         assert_eq!(&ret, &[b'A', b'C', b'A', b'B', 13, 12]);
@@ -176,7 +176,7 @@ mod test {
         // === With the sized codec used everywhere
 
         // With the Sized codec, the size is written as an u32.
-        let buf = SizedCodec::<Str>::encode_alloc(&letter).unwrap();
+        let buf = SizedCodec::<Str>::encode_alloc(letter).unwrap();
         let buf = SizedCodec::<Bytes>::encode(buf, &number).unwrap();
         let ret = buf.into_decoding_vec().consume();
         assert_eq!(
@@ -195,7 +195,7 @@ mod test {
 
         // === With the sized codec for all entries except the last
 
-        let buf = SizedCodec::<Str>::encode_alloc(&letter).unwrap();
+        let buf = SizedCodec::<Str>::encode_alloc(letter).unwrap();
         let buf = Bytes::encode(buf, &number).unwrap();
         let ret = buf.into_decoding_vec().consume();
         assert_eq!(&ret, &[0, 0, 0, 4, b'A', b'C', b'A', b'B', 13, 12]);

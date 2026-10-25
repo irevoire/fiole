@@ -5,13 +5,13 @@
 It's because I made some big changes to the `fjall` API that I didn't like. Here's a non exhaustive list:
 
 - I only re-exposed the [`fjall::OptimisticTxDatabase`] because I don't think I ever needed a database without transaction.
-- I got rids of all the methods that runs wrapped in a transaction like [`fjall::OptimisticTxKeyspace::take`], forcing you to always use a transaction. I find that less error prone.
+- I got rid of all the methods that run wrapped in a transaction like [`fjall::OptimisticTxKeyspace::take`], forcing you to always use a transaction. I find that less error prone.
 - I "inverted" the way we access to data. Instead of doing `txn.get(keyspace)` we're now doing `keyspace.get(txn)`. I find that easier to understand as a end user.
 
 # Why "high level"
 
 Because we have _types_, you can now specify the type of the key values in a keyspace through a codec system.
-See all the codec availabe at [`codec`].
+See all the codecs available at [`codec`].
 
 # Example
 

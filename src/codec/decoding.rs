@@ -16,7 +16,7 @@ pub trait Decode {
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error>;
 }
 
-impl<'a, T> Decode for &'a T
+impl<T> Decode for &T
 where
     T: Decode,
 {
@@ -41,7 +41,7 @@ impl From<Slice> for DecodingVec<'static> {
 impl<'a> From<&'a Slice> for DecodingVec<'a> {
     fn from(value: &'a Slice) -> Self {
         Self {
-            cursor: Cursor::new(Cow::Borrowed(&value)),
+            cursor: Cursor::new(Cow::Borrowed(value)),
         }
     }
 }

@@ -223,7 +223,7 @@ mod test {
 
         type MyCodec2<'a> = ComposeCodec<(&'a SizedCodec<Bytes>, &'a Str)>;
 
-        let buf = MyCodec2::encode_alloc(&(&number, &letter)).unwrap();
+        let buf = MyCodec2::encode_alloc(&(&number, letter)).unwrap();
         let decode = MyCodec2::decode(&mut buf.into_decoding_vec()).unwrap();
         assert_eq!((number.to_vec(), letter.to_string()), (decode.0, decode.1));
     }

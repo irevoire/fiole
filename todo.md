@@ -66,9 +66,9 @@ self-contained so it can be picked up independently by an agent or a human.
 - Add `rust-version` to `Cargo.toml` (edition 2024 ⇒ at least 1.85).
 - Trailing space in the `description` field.
 - CI (`.github/workflows/ci.yml`): add a `cargo clippy --all-features
-  --all-targets -- -D warnings` job (after T30), a `RUSTDOCFLAGS="-D warnings"
-  cargo doc --all-features --no-deps` job, and a matrix building each feature
-  alone (`--no-default-features --features <f>`).
+  --all-targets -- -D warnings` job (clippy is clean, also per feature), a
+  `RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps` job, and a
+  matrix building each feature alone (`--no-default-features --features <f>`).
 
 ### T28 Naming consistency
 
@@ -83,24 +83,8 @@ self-contained so it can be picked up independently by an agent or a human.
   the first fields of a compose key. Idea: `prefix_with::<PrefixCodec>(&rtxn,
   &item)` that encodes with another codec, or a `prefix_raw(&[u8])`. Ask owner.
 
-### T30 Clippy and cosmetics
-
-- Fix the clippy warnings (`cargo clippy --all-features --all-targets`):
-  redundant `#[must_use]` on functions returning `Result` (`src/lib.rs`
-  `Guard::size/key/value/into_inner`), `.clone()` on `PhantomData` in
-  `Keyspace::clone`, needless borrows, elidable lifetimes, redundant
-  `.map_err(Into::into)` in `integer.rs`, redundant closures, complex types.
-- `#[repr(transparent)]` on `Keyspace` serves no purpose → remove.
-- Typos: "parkeyspacetition" (`src/keyspace.rs`, `is_empty` doc), "informations"
-  (`src/lib.rs`), "availabe" and "got rids" (`README.md`).
-- `len` doc test has leftover assertion messages `"hello"`/`"world"`;
-  `first_key_value`/`last_key_value` examples use `&mut wtxn` where `&wtxn`
-  suffices.
-
 ---
 
 ## Suggested order
 
-1. Nits T27–T30.
-
-Dependencies: T27's clippy CI job needs T30 first.
+1. Nits T27–T29.

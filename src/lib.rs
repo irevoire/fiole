@@ -59,9 +59,8 @@ impl<Key, Value> Guard<Key, Value> {
         Guard::new(self.inner, self.prefix_len)
     }
 
-    /// For more informations, refer to [`fjall::Guard::size`].
+    /// For more information, refer to [`fjall::Guard::size`].
     #[inline]
-    #[must_use]
     pub fn size(self) -> Result<u32, fjall::Error> {
         self.inner.size()
     }
@@ -103,9 +102,8 @@ fn decode_key<Key: codec::Decode>(
 }
 
 impl<Key: codec::Decode, Value> Guard<Key, Value> {
-    /// For more informations, refer to [`fjall::Guard::key`].
+    /// For more information, refer to [`fjall::Guard::key`].
     #[inline]
-    #[must_use]
     pub fn key(self) -> Result<Key::Item, Error<Key::Error, Infallible>> {
         let key = self.inner.key().map_err(Error::Fjall)?;
         decode_key::<Key>(&key, self.prefix_len).map_err(Error::Key)
@@ -113,9 +111,8 @@ impl<Key: codec::Decode, Value> Guard<Key, Value> {
 }
 
 impl<Key, Value: codec::Decode> Guard<Key, Value> {
-    /// For more informations, refer to [`fjall::Guard::value`].
+    /// For more information, refer to [`fjall::Guard::value`].
     #[inline]
-    #[must_use]
     pub fn value(self) -> Result<Value::Item, Error<Infallible, Value::Error>> {
         let value = self.inner.value().map_err(Error::Fjall)?;
         Value::decode(&mut (&value).into()).map_err(Error::Value)
@@ -123,9 +120,12 @@ impl<Key, Value: codec::Decode> Guard<Key, Value> {
 }
 
 impl<Key: codec::Decode, Value: codec::Decode> Guard<Key, Value> {
-    /// For more informations, refer to [`fjall::Guard::into_inner`].
+    /// For more information, refer to [`fjall::Guard::into_inner`].
     #[inline]
-    #[must_use]
+    #[expect(
+        clippy::type_complexity,
+        reason = "spelling out the precise error types is deliberate"
+    )]
     pub fn into_inner(self) -> Result<(Key::Item, Value::Item), Error<Key::Error, Value::Error>> {
         let (k, v) = self.inner.into_inner().map_err(Error::Fjall)?;
         Ok((
@@ -204,9 +204,9 @@ mod test {
     #[test]
     fn get_from_wtxn() {
         let dir = tempfile::tempdir().unwrap();
-        let database = Database::builder(&dir.path()).unwrap();
+        let database = Database::builder(dir.path()).unwrap();
         let ks = database
-            .keyspace::<Str, Str>("hello", || KeyspaceCreateOptions::default())
+            .keyspace::<Str, Str>("hello", KeyspaceCreateOptions::default)
             .unwrap();
 
         // we should be able to get both from a rtxn and a wtxn with the same method and API
@@ -220,9 +220,9 @@ mod test {
     #[test]
     fn range_query() {
         let dir = tempfile::tempdir().unwrap();
-        let database = Database::builder(&dir.path()).unwrap();
+        let database = Database::builder(dir.path()).unwrap();
         let ks = database
-            .keyspace::<U8, U8>("hello", || KeyspaceCreateOptions::default())
+            .keyspace::<U8, U8>("hello", KeyspaceCreateOptions::default)
             .unwrap();
 
         let mut wtxn = database.write_tx().unwrap();
