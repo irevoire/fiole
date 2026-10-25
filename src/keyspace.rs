@@ -208,10 +208,9 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
         if self.prefix.is_empty() {
             self.with_prefix(prefix)
         } else {
-            let mut bytes = Vec::with_capacity(self.prefix.len() + prefix.len());
-            bytes.extend_from_slice(&self.prefix);
-            bytes.extend_from_slice(&prefix);
-            self.with_prefix(bytes.into())
+            // Stored inline, without allocating, when it's short enough
+            let fused = byteview::ByteView::fused(&self.prefix, &prefix);
+            self.with_prefix(fused.into())
         }
     }
 
@@ -241,7 +240,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
         &self,
         prefix: &C::Item,
     ) -> Result<Keyspace<Key, Value, Prefixed>, C::Error> {
-        let prefix = C::encode(EncodingVec::with_prefix(&self.prefix), prefix)?;
+        let prefix = C::encode(EncodingVec::with_prefix(&self.prefix, 0), prefix)?;
         Ok(self.with_prefix(prefix.into_fjall_slice()))
     }
 
@@ -442,7 +441,13 @@ impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
     /// Encodes `key` after the prefix.
     #[inline]
     fn encode_key(&self, key: &Key::Item) -> Result<Vec<u8>, Key::Error> {
-        Ok(Key::encode(EncodingVec::with_prefix(&self.prefix), key)?.finish())
+        let headroom = if self.prefix.is_empty() {
+            0
+        } else {
+            KEY_HEADROOM
+        };
+        let vec = EncodingVec::with_prefix(&self.prefix, headroom);
+        Ok(Key::encode(vec, key)?.finish())
     }
 }
 
@@ -723,6 +728,11 @@ impl<Key: Encode, Value: Encode, Kind> Keyspace<Key, Value, Kind> {
         Ok(())
     }
 }
+
+/// The room reserved after the prefix when encoding a key, so the keys up
+/// to that size don't need to grow the buffer: they cost as many allocations
+/// with a prefix as without.
+const KEY_HEADROOM: usize = 64;
 
 /// Returns the smallest key greater than every key starting with `prefix`,
 /// or `None` if there isn't any (`prefix` is empty or only made of `0xFF`).
@@ -1281,5 +1291,123 @@ mod test {
         too_long_remove: |db, ks| ks.remove(&mut db.write_tx().unwrap(), &1);
         too_long_range: |db, ks| ks.range(&db.read_tx(), &(1..)).map(Iterator::count);
         too_long_prefix: |db, ks| ks.prefix(&db.read_tx(), &1).map(Iterator::count);
+    }
+
+    /// The fewest allocations made by `f` over a few runs: fjall sometimes
+    /// allocates a bit more, for its own bookkeeping.
+    fn min_allocations<R>(mut f: impl FnMut() -> R) -> usize {
+        (0..5)
+            .map(|_| crate::test_alloc::allocations(&mut f).1)
+            .min()
+            .unwrap()
+    }
+
+    /// Runs every method taking a key on `ks` with `key`, and on `root` with
+    /// the same raw key, and checks that they allocate as much.
+    fn assert_allocates_like_the_root(
+        db: &Database,
+        root: &Keyspace<Bytes, U8, Root>,
+        ks: &Keyspace<Bytes, U8>,
+        key: &[u8],
+    ) {
+        use std::ops::Bound::{Excluded, Included, Unbounded};
+
+        let full = [&*ks.prefix, key].concat();
+        let ctx = format!(
+            "prefix of {} bytes, key of {} bytes",
+            ks.prefix.len(),
+            key.len()
+        );
+        let mut wtxn = db.write_tx().unwrap();
+
+        macro_rules! compare {
+            ($name:literal, |$ks:ident, $key:ident| $call:expr) => {{
+                let prefixed = min_allocations(|| {
+                    let ($ks, $key) = (ks, key);
+                    $call
+                });
+                let root = min_allocations(|| {
+                    let ($ks, $key): (&Keyspace<Bytes, U8>, _) = (root, &full[..]);
+                    $call
+                });
+                assert_eq!(
+                    prefixed, root,
+                    "{} allocated more than the root, {ctx}",
+                    $name
+                );
+            }};
+        }
+
+        compare!("insert", |ks, key| ks.insert(&mut wtxn, key, &1).unwrap());
+        compare!("get", |ks, key| ks.get(&wtxn, key).unwrap());
+        compare!("contains_key", |ks, key| ks
+            .contains_key(&wtxn, key)
+            .unwrap());
+        compare!("size_of", |ks, key| ks.size_of(&wtxn, key).unwrap());
+        compare!("prefix", |ks, key| ks.prefix(&wtxn, key).unwrap());
+        compare!("take", |ks, key| ks.take(&mut wtxn, key).unwrap());
+        compare!("remove", |ks, key| ks.remove(&mut wtxn, key).unwrap());
+
+        // On a prefixed keyspace an unbounded end becomes the successor of the
+        // prefix, compare with the same query on the root.
+        let end = successor(&ks.prefix).unwrap();
+        let prefixed = min_allocations(|| ks.range(&wtxn, &(Included(key), Unbounded)).unwrap());
+        let rooted = min_allocations(|| {
+            root.range(&wtxn, &(Included(&full[..]), Excluded(&end[..])))
+                .unwrap()
+        });
+        assert_eq!(
+            prefixed, rooted,
+            "range allocated more than the root, {ctx}"
+        );
+    }
+
+    #[test]
+    fn prefixed_keyspaces_allocate_like_the_root() {
+        let (_dir, db, root) = setup();
+        let root = root.remap_types::<Bytes, U8>();
+        let short = root.prefixed_raw(&b"p\0"[..]);
+        let long = root.prefixed_raw(vec![b'p'; 40]);
+        let chained = short.prefixed_raw(vec![b'q'; 40]);
+
+        for ks in [&short, &long, &chained] {
+            for key_len in [0, 1, 20, super::KEY_HEADROOM] {
+                assert_allocates_like_the_root(&db, &root, ks, &vec![b'k'; key_len]);
+            }
+        }
+    }
+
+    #[test]
+    fn reading_keys_through_a_prefix_does_not_allocate() {
+        use crate::test_alloc::allocations;
+
+        let (_dir, db, root) = setup();
+        let ks = root.prefixed_raw(vec![b'p'; 40]);
+        let mut wtxn = db.write_tx().unwrap();
+        ks.insert(&mut wtxn, &1, "one").unwrap();
+
+        let guard = ks.iter(&wtxn).next().unwrap();
+        let (key, allocated) = allocations(|| guard.key().unwrap());
+        assert_eq!((key, allocated), (1, 0));
+        let guard = ks.iter(&wtxn).next().unwrap();
+        let (_, allocated) = allocations(|| guard.raw_key().unwrap());
+        assert_eq!(allocated, 0);
+    }
+
+    #[test]
+    fn creating_prefixes_allocates_only_for_long_ones() {
+        use crate::test_alloc::allocations;
+
+        let (_dir, _db, root) = setup();
+        // fjall stores up to 20 bytes inline
+        let (short, allocated) = allocations(|| root.prefixed_raw(&b"p\0"[..]));
+        assert_eq!(allocated, 0, "short prefix");
+        let (_, allocated) = allocations(|| short.prefixed_raw(&b"q\0"[..]));
+        assert_eq!(allocated, 0, "short chained prefix");
+        let long = fjall::Slice::from(&[b'q'; 30][..]);
+        let (_, allocated) = allocations(|| short.prefixed_raw(long.clone()));
+        assert_eq!(allocated, 1, "long chained prefix");
+        let (_, allocated) = allocations(|| short.clone());
+        assert_eq!(allocated, 0, "clone");
     }
 }

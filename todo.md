@@ -51,19 +51,3 @@ self-contained so it can be picked up independently by an agent or a human.
   of the file being changed. Write it first and check it fails before fixing.
 - Line numbers are those at commit `813d092`; they may drift. Prefer the
   function names.
-
----
-
-## ⚪ Minor issues and nitpicks
-
-### T29 Missing features
-
-- `Keyspace::prefix` requires a full `Key::Item`, so you can't prefix-search by
-  the first fields of a compose key. Idea: `prefix_with::<PrefixCodec>(&rtxn,
-  &item)` that encodes with another codec, or a `prefix_raw(&[u8])`. Ask owner.
-
----
-
-## Suggested order
-
-1. T29 (needs the owner's decision).

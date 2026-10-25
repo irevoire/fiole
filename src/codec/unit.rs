@@ -54,8 +54,8 @@ impl StdError for NonEmptyError {}
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        check_round_trip, ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Terminated, Unit,
-        U8,
+        ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Terminated, U8, Unit,
+        check_round_trip,
     };
 
     #[test]

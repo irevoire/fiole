@@ -177,11 +177,14 @@ impl EncodingVec<Fresh> {
         }
     }
 
-    /// Starts a buffer with `prefix` already written. The codecs only see
-    /// what comes after it, so they can't read or modify it.
-    pub(crate) fn with_prefix(prefix: &[u8]) -> Self {
+    /// Starts a buffer with `prefix` already written, and room for
+    /// `headroom` more bytes. The codecs only see what comes after the
+    /// prefix, so they can't read or modify it.
+    pub(crate) fn with_prefix(prefix: &[u8], headroom: usize) -> Self {
+        let mut vec = Vec::with_capacity(prefix.len() + headroom);
+        vec.extend_from_slice(prefix);
         Self {
-            vec: prefix.to_vec(),
+            vec,
             start_at: prefix.len(),
             marker: PhantomData,
         }
