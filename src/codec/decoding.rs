@@ -54,7 +54,15 @@ impl<'a> DecodingVec<'a> {
     }
 
     /// Reads `bytes` without copying them.
-    pub(crate) fn borrowed(bytes: &'a [u8]) -> Self {
+    ///
+    /// ```
+    /// use fiole::codec::{Decode, DecodingVec, Str};
+    ///
+    /// let bytes = b"hello";
+    /// let decoded = Str::decode(&mut DecodingVec::borrowed(bytes)).unwrap();
+    /// assert_eq!(decoded, "hello");
+    /// ```
+    pub fn borrowed(bytes: &'a [u8]) -> Self {
         Self {
             cursor: Cursor::new(Cow::Borrowed(bytes)),
         }
