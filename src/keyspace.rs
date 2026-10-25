@@ -2,6 +2,7 @@ use fjall::Readable as _;
 use fjall::{OptimisticTxKeyspace, Slice};
 use std::{
     convert::Infallible,
+    fmt,
     marker::PhantomData,
     ops::{Bound, Deref, RangeBounds},
     path::PathBuf,
@@ -95,6 +96,18 @@ pub struct Keyspace<Key, Value, Kind = Prefixed> {
 impl<Key, Value, Kind> Clone for Keyspace<Key, Value, Kind> {
     fn clone(&self) -> Self {
         self.with_prefix(self.prefix.clone())
+    }
+}
+
+impl<Key, Value, Kind> fmt::Debug for Keyspace<Key, Value, Kind> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Keyspace")
+            .field("name", &&**self.inner.inner().name())
+            .field(
+                "prefix",
+                &format_args!("b\"{}\"", self.prefix.escape_ascii()),
+            )
+            .finish_non_exhaustive()
     }
 }
 
@@ -434,6 +447,51 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     #[inline]
     pub fn iter(&self, rtxn: &Rtxn) -> Iter<Key, Value> {
         Iter::new(self.raw_iter(rtxn), self.prefix.len())
+    }
+
+    /// Removes all the keys of the keyspace.
+    ///
+    /// On a prefixed keyspace, only the keys starting with its prefix are
+    /// removed, including the ones of the keyspaces prefixed from it. On the
+    /// root, everything is removed.
+    ///
+    /// The keys are removed one by one in the transaction, so it can be rolled
+    /// back, and it conflicts with the transactions writing to one of them.
+    ///
+    /// # Caution
+    ///
+    /// This operation reads all the keys to remove them: `O(n)` complexity,
+    /// and the keys are held in memory until they're removed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::Str};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder).unwrap();
+    /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
+    /// let users = ks.prefixed_raw(b"users\0");
+    /// let posts = ks.prefixed_raw(b"posts\0");
+    ///
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// users.insert(&mut wtxn, "tamo", "Tamo").unwrap();
+    /// posts.insert(&mut wtxn, "hello", "Hello world").unwrap();
+    ///
+    /// users.clear(&mut wtxn).unwrap();
+    /// assert!(users.is_empty(&wtxn).unwrap());
+    /// assert_eq!(posts.len(&wtxn).unwrap(), 1);
+    /// ```
+    pub fn clear(&self, wtxn: &mut Wtxn) -> Result<(), fjall::Error> {
+        let keys = self
+            .raw_iter(wtxn)
+            .map(fjall::Guard::key)
+            .collect::<Result<Vec<_>, _>>()?;
+        let wtxn = wtxn.write_inner();
+        for key in keys {
+            wtxn.remove(&self.inner, key);
+        }
+        Ok(())
     }
 }
 
@@ -1409,5 +1467,109 @@ mod test {
         assert_eq!(allocated, 1, "long chained prefix");
         let (_, allocated) = allocations(|| short.clone());
         assert_eq!(allocated, 0, "clone");
+    }
+
+    #[test]
+    fn debug() {
+        let (_dir, _db, root) = setup();
+        assert_eq!(
+            format!("{root:?}"),
+            r#"Keyspace { name: "hello", prefix: b"", .. }"#
+        );
+        let users = root.prefixed_raw(&b"users\0"[..]);
+        assert_eq!(
+            format!("{users:?}"),
+            r#"Keyspace { name: "hello", prefix: b"users\x00", .. }"#
+        );
+        let typed = users.prefixed::<U32<BigEndian>>(&0xff).unwrap();
+        assert_eq!(
+            format!("{typed:?}"),
+            r#"Keyspace { name: "hello", prefix: b"users\x00\x00\x00\x00\xff", .. }"#
+        );
+    }
+
+    #[test]
+    fn clear() {
+        for_each_kind(|db, ks, prefix| {
+            insert_123(db, ks);
+            let rtxn = db.read_tx();
+            let mut wtxn = db.write_tx().unwrap();
+            ks.clear(&mut wtxn).unwrap();
+            // the transaction sees its own clear, the others don't yet
+            assert!(ks.is_empty(&wtxn).unwrap(), "{prefix:?}");
+            assert_eq!(ks.len(&rtxn).unwrap(), 3);
+            wtxn.commit().unwrap().unwrap();
+
+            assert!(ks.is_empty(&db.read_tx()).unwrap());
+            // the keyspace is still usable
+            insert_123(db, ks);
+            assert_eq!(ks.len(&db.read_tx()).unwrap(), 3);
+        });
+    }
+
+    #[test]
+    fn clear_only_removes_the_keys_under_the_prefix() {
+        let (_dir, db, root) = setup();
+        let a = root.prefixed_raw(&b"a\0"[..]);
+        let ab = a.prefixed_raw(&b"b\0"[..]);
+        let b = root.prefixed_raw(&b"b\0"[..]);
+        for ks in [&a, &ab, &b] {
+            insert_123(&db, ks);
+        }
+
+        let mut wtxn = db.write_tx().unwrap();
+        a.clear(&mut wtxn).unwrap();
+        wtxn.commit().unwrap().unwrap();
+        let rtxn = db.read_tx();
+        // `a` and its child are cleared, its sibling isn't
+        assert!(a.is_empty(&rtxn).unwrap());
+        assert!(ab.is_empty(&rtxn).unwrap());
+        assert_eq!(b.len(&rtxn).unwrap(), 3);
+
+        // clearing the root clears everything
+        let mut wtxn = db.write_tx().unwrap();
+        root.clear(&mut wtxn).unwrap();
+        wtxn.commit().unwrap().unwrap();
+        assert!(root.is_empty(&db.read_tx()).unwrap());
+    }
+
+    #[test]
+    fn clear_can_be_rolled_back() {
+        let (_dir, db, root) = setup();
+        let ks = root.prefixed_raw(&b"p\0"[..]);
+        insert_123(&db, &ks);
+        let mut wtxn = db.write_tx().unwrap();
+        ks.clear(&mut wtxn).unwrap();
+        wtxn.rollback();
+        assert_eq!(keys(ks.iter(&db.read_tx())), [1, 2, 3]);
+    }
+
+    #[test]
+    fn clear_conflicts_with_concurrent_writes_under_the_prefix() {
+        let (_dir, db, root) = setup();
+        let ks = root.prefixed_raw(&b"p\0"[..]);
+        let other = root.prefixed_raw(&b"q\0"[..]);
+        insert_123(&db, &ks);
+
+        // a write to another prefix doesn't conflict
+        let mut clearing = db.write_tx().unwrap();
+        let mut writer = db.write_tx().unwrap();
+        ks.clear(&mut clearing).unwrap();
+        other.insert(&mut writer, &1, "other").unwrap();
+        writer.commit().unwrap().unwrap();
+        clearing.commit().unwrap().unwrap();
+
+        // a write to a cleared key does
+        insert_123(&db, &ks);
+        let mut clearing = db.write_tx().unwrap();
+        let mut writer = db.write_tx().unwrap();
+        ks.clear(&mut clearing).unwrap();
+        ks.insert(&mut writer, &2, "concurrent").unwrap();
+        writer.commit().unwrap().unwrap();
+        assert!(matches!(clearing.commit().unwrap(), Err(crate::Conflict)));
+        assert_eq!(
+            ks.get(&db.read_tx(), &2).unwrap().as_deref(),
+            Some("concurrent")
+        );
     }
 }
