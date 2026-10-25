@@ -4,12 +4,12 @@ use std::{
     convert::Infallible,
     fmt,
     marker::PhantomData,
-    ops::{Bound, Deref, RangeBounds},
+    ops::{Bound, Deref},
     path::PathBuf,
 };
 
 use crate::{
-    Error, Guard, Iter, Rtxn, Wtxn,
+    Error, Guard, Iter, KeyRange, Rtxn, Wtxn,
     codec::{Decode, Encode, EncodingVec},
 };
 
@@ -649,6 +649,10 @@ impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
     /// with the key codec and the keys are compared by their encoded bytes.
     /// See [the ordering section](crate::codec#keys-and-ordering) of the codecs.
     ///
+    /// Any [`KeyRange`] is accepted: the ranges of the standard library and
+    /// the tuples of [`Bound`]s, holding keys or references to keys, so
+    /// unsized keys work too, e.g. `"a".."c"` for a [`Str`](crate::codec::Str) key.
+    ///
     /// # Examples
     ///
     /// ```
@@ -676,7 +680,7 @@ impl<Key: Encode, Value, Kind> Keyspace<Key, Value, Kind> {
     /// Panics if the prefix followed by one of the encoded bounds is longer
     /// than 65535 bytes, the maximum key size of fjall.
     #[inline]
-    pub fn range<R: RangeBounds<Key::Item>>(
+    pub fn range<R: KeyRange<Key::Item>>(
         &self,
         rtxn: &Rtxn,
         range: &R,
@@ -1124,12 +1128,10 @@ mod test {
 
     #[test]
     fn range() {
-        use std::ops::{
-            Bound::{Excluded, Unbounded},
-            RangeBounds,
-        };
+        use crate::KeyRange;
+        use std::ops::Bound::{Excluded, Unbounded};
 
-        fn range(ks: &Keyspace<U8, Str>, rtxn: &crate::Rtxn, r: impl RangeBounds<u8>) -> Vec<u8> {
+        fn range(ks: &Keyspace<U8, Str>, rtxn: &crate::Rtxn, r: impl KeyRange<u8>) -> Vec<u8> {
             keys(ks.range(rtxn, &r).unwrap())
         }
 
@@ -1571,5 +1573,59 @@ mod test {
             ks.get(&db.read_tx(), &2).unwrap().as_deref(),
             Some("concurrent")
         );
+    }
+
+    #[test]
+    fn range_accepts_borrowed_bounds_of_unsized_keys() {
+        use std::ops::Bound::{Excluded, Included, Unbounded};
+
+        let (_dir, db, root) = setup();
+        let ks = root.remap_types::<Str, U8>().prefixed_raw(&b"p\0"[..]);
+        let mut wtxn = db.write_tx().unwrap();
+        for (i, key) in ["a", "b", "c", "d"].iter().enumerate() {
+            ks.insert(&mut wtxn, key, &(i as u8)).unwrap();
+        }
+
+        let range = |iter: crate::Iter<Str, U8>| -> Vec<String> {
+            iter.map(|guard| guard.key().unwrap()).collect()
+        };
+        assert_eq!(range(ks.range(&wtxn, &("b"..)).unwrap()), ["b", "c", "d"]);
+        assert_eq!(range(ks.range(&wtxn, &(.."c")).unwrap()), ["a", "b"]);
+        assert_eq!(range(ks.range(&wtxn, &(..="c")).unwrap()), ["a", "b", "c"]);
+        assert_eq!(range(ks.range(&wtxn, &("b".."d")).unwrap()), ["b", "c"]);
+        assert_eq!(
+            range(ks.range(&wtxn, &("b"..="d")).unwrap()),
+            ["b", "c", "d"]
+        );
+        assert_eq!(range(ks.range(&wtxn, &(..)).unwrap()), ["a", "b", "c", "d"]);
+        let bounds = (Excluded("a"), Included("c"));
+        assert_eq!(range(ks.range(&wtxn, &bounds).unwrap()), ["b", "c"]);
+        let bounds = (Included("c"), Unbounded);
+        assert_eq!(range(ks.range(&wtxn, &bounds).unwrap()), ["c", "d"]);
+
+        let bytes = ks.remap_key_type::<Bytes>();
+        let keys: Vec<Vec<u8>> = bytes
+            .range(&wtxn, &(&b"b"[..]..&b"d"[..]))
+            .unwrap()
+            .map(|guard| guard.key().unwrap())
+            .collect();
+        assert_eq!(keys, [b"b", b"c"]);
+    }
+
+    #[test]
+    fn range_accepts_owned_and_borrowed_bounds_of_sized_keys() {
+        use std::ops::Bound::{Excluded, Unbounded};
+
+        let (_dir, db, root) = setup();
+        insert_123(&db, &root);
+        let rtxn = db.read_tx();
+        assert_eq!(keys(root.range(&rtxn, &(2..)).unwrap()), [2, 3]);
+        assert_eq!(keys(root.range(&rtxn, &(&2..)).unwrap()), [2, 3]);
+        assert_eq!(keys(root.range(&rtxn, &(&1..&3)).unwrap()), [1, 2]);
+        assert_eq!(keys(root.range(&rtxn, &(..=&2)).unwrap()), [1, 2]);
+        let bounds = (Excluded(1), Unbounded);
+        assert_eq!(keys(root.range(&rtxn, &bounds).unwrap()), [2, 3]);
+        let bounds = (Excluded(&1), Unbounded);
+        assert_eq!(keys(root.range(&rtxn, &bounds).unwrap()), [2, 3]);
     }
 }

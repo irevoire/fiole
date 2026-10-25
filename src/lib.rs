@@ -5,6 +5,7 @@ use std::{convert::Infallible, marker::PhantomData};
 pub mod codec;
 mod database;
 mod error;
+mod key_range;
 mod keyspace;
 #[cfg(test)]
 mod test_alloc;
@@ -13,6 +14,7 @@ pub(crate) mod txn;
 pub use database::Database;
 pub use error::Error;
 pub use fjall::{Conflict, KeyspaceCreateOptions, PersistMode};
+pub use key_range::KeyRange;
 pub use keyspace::{Keyspace, Prefixed, Root};
 pub use txn::{Rtxn, Wtxn};
 
