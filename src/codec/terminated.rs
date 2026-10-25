@@ -40,15 +40,14 @@ impl Terminator for Nul {
 /// Compared to [`SizedCodec`](crate::codec::SizedCodec), it costs one byte instead
 /// of four, decodes without copying, and keeps the order of the inner codec
 /// when the pattern is only made of `0x00` bytes (like [`Nul`]) and the inner
-/// codec is itself ordered (`Str`, `Bytes`, `U32<BE>`, but not `U32<LE>`).
+/// codec is itself ordered (`Str`, `Bytes`, `OrderedU32`, but not `U32<LE>`).
 /// That makes `Terminated<Str>` the codec of choice for ordered string keys,
 /// even in the middle of a [`ComposeCodec`](crate::codec::ComposeCodec).
 ///
 /// ```
-/// use byteorder::BE;
-/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, Str, Terminated, U32};
+/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, OrderedU32, Str, Terminated};
 ///
-/// type Key<'a> = ComposeCodec<(&'a Terminated<Str>, U32<BE>)>;
+/// type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedU32)>;
 ///
 /// let bytes = Key::encode_alloc(&("hello", 42)).unwrap().finish();
 /// assert_eq!(bytes, b"hello\0\0\0\0\x2a");

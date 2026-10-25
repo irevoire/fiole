@@ -2,7 +2,38 @@
 
 use std::{convert::Infallible, io::Read};
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
+use byteorder::BigEndian;
+
+use crate::codec::{
+    Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting, U8, U16, U32, U64, U128,
+};
+
+macro_rules! define_ordered_uint {
+    ($name:ident, $unsigned:ty, $codec:ty) => {
+        #[doc = concat!("Encodable version of [`", stringify!($unsigned), "`] that keeps the numeric order, to be used as a key.")]
+        ///
+        #[doc = concat!("It's only an alias to [`", stringify!($codec), "`]: unsigned integers stored big-endian already sort like the numbers.")]
+        /// It exists so you can find all the codecs that keep the numeric order under the same name.
+        ///
+        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        ///
+        /// ```
+        #[doc = concat!("use fiole::codec::{Decode, DecodingVec, Encode, ", stringify!($name), "};")]
+        ///
+        #[doc = concat!("let one = ", stringify!($name), "::encode_alloc(&1).unwrap().finish();")]
+        #[doc = concat!("let two_hundred = ", stringify!($name), "::encode_alloc(&200).unwrap().finish();")]
+        /// assert!(one < two_hundred);
+        #[doc = concat!("assert_eq!(", stringify!($name), "::decode(&mut DecodingVec::new(two_hundred)).unwrap(), 200);")]
+        /// ```
+        pub type $name = $codec;
+    };
+}
+
+define_ordered_uint!(OrderedU8, u8, U8);
+define_ordered_uint!(OrderedU16, u16, U16<BigEndian>);
+define_ordered_uint!(OrderedU32, u32, U32<BigEndian>);
+define_ordered_uint!(OrderedU64, u64, U64<BigEndian>);
+define_ordered_uint!(OrderedU128, u128, U128<BigEndian>);
 
 macro_rules! define_ordered_int {
     ($name:ident, $signed:ty, $unsigned:ty) => {
@@ -152,8 +183,9 @@ mod test {
         Database,
         codec::{
             Decode, DecodingVec, Encode, OrderedF32, OrderedF64, OrderedI8, OrderedI16, OrderedI32,
-            OrderedI64, OrderedI128, U8, check_order_preserving, check_round_trip,
-            check_self_delimiting, check_self_delimiting_with,
+            OrderedI64, OrderedI128, OrderedU8, OrderedU16, OrderedU32, OrderedU64, OrderedU128,
+            U8, check_order_preserving, check_round_trip, check_self_delimiting,
+            check_self_delimiting_with,
         },
     };
 
@@ -203,6 +235,27 @@ mod test {
         arbtest::arbtest(check_order_preserving::<OrderedI32, i32>);
         arbtest::arbtest(check_order_preserving::<OrderedI64, i64>);
         arbtest::arbtest(check_order_preserving::<OrderedI128, i128>);
+    }
+
+    #[test]
+    fn unsigned_integers() {
+        arbtest::arbtest(check_round_trip::<OrderedU8, u8>);
+        arbtest::arbtest(check_round_trip::<OrderedU16, u16>);
+        arbtest::arbtest(check_round_trip::<OrderedU32, u32>);
+        arbtest::arbtest(check_round_trip::<OrderedU64, u64>);
+        arbtest::arbtest(check_round_trip::<OrderedU128, u128>);
+
+        arbtest::arbtest(check_self_delimiting::<OrderedU8, u8>);
+        arbtest::arbtest(check_self_delimiting::<OrderedU16, u16>);
+        arbtest::arbtest(check_self_delimiting::<OrderedU32, u32>);
+        arbtest::arbtest(check_self_delimiting::<OrderedU64, u64>);
+        arbtest::arbtest(check_self_delimiting::<OrderedU128, u128>);
+
+        arbtest::arbtest(check_order_preserving::<OrderedU8, u8>);
+        arbtest::arbtest(check_order_preserving::<OrderedU16, u16>);
+        arbtest::arbtest(check_order_preserving::<OrderedU32, u32>);
+        arbtest::arbtest(check_order_preserving::<OrderedU64, u64>);
+        arbtest::arbtest(check_order_preserving::<OrderedU128, u128>);
     }
 
     /// Floats ordered by `total_cmp`, since they don't implement [`Ord`].

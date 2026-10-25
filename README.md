@@ -24,7 +24,7 @@ use fiole::codec::{Str, U32};
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(&dir.path()).unwrap();
 
-// Any byte order is fine for a value, but `byteorder::BigEndian` is better suited for keys if you want them to be sorted numerically
+// Any byte order is fine for a value, but use `OrderedU32` for keys if you want them to be sorted numerically
 let ks = db.keyspace::<Str, U32<byteorder::NativeEndian>>("Hey you!", KeyspaceCreateOptions::default).unwrap();
 
 // opening a write transaction
@@ -69,8 +69,7 @@ as you want.
 
 ```rust
 use fiole::{KeyspaceCreateOptions, Database};
-use fiole::byteorder::BigEndian;
-use fiole::codec::{Str, U32};
+use fiole::codec::{OrderedU32, Str};
 
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(dir.path()).unwrap();
@@ -80,7 +79,7 @@ let root = db.keyspace::<Str, Str>("data", KeyspaceCreateOptions::default).unwra
 let users = root.prefixed_raw(b"users\0");
 let posts = root.prefixed_raw(b"posts\0");
 // Prefixes can be chained and encoded with any codec
-let tamo = users.prefixed::<U32<BigEndian>>(&42).unwrap();
+let tamo = users.prefixed::<OrderedU32>(&42).unwrap();
 
 let mut wtxn = db.write_tx().unwrap();
 tamo.insert(&mut wtxn, "name", "Tamo").unwrap();

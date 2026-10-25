@@ -46,13 +46,13 @@ pub enum Prefixed {}
 /// chained:
 ///
 /// ```
-/// # use fiole::{Database, KeyspaceCreateOptions, codec::{Str, U32}, byteorder::BigEndian};
+/// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
 /// #
 /// # let folder = tempfile::tempdir().unwrap();
 /// # let db = Database::builder(folder).unwrap();
 /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
 /// let users = ks.prefixed_raw(b"users\0");
-/// let tamo = users.prefixed::<U32<BigEndian>>(&42).unwrap();
+/// let tamo = users.prefixed::<OrderedU32>(&42).unwrap();
 ///
 /// let mut wtxn = db.write_tx().unwrap();
 /// tamo.insert(&mut wtxn, "name", "Tamo").unwrap();
@@ -242,12 +242,12 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// methods taking a key panic if the prefix followed by the key is longer.
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{Str, U32}, byteorder::BigEndian};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
     /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
-    /// let user = ks.prefixed::<U32<BigEndian>>(&42).unwrap();
+    /// let user = ks.prefixed::<OrderedU32>(&42).unwrap();
     ///
     /// let mut wtxn = db.write_tx().unwrap();
     /// user.insert(&mut wtxn, "name", "Tamo").unwrap();

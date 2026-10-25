@@ -8,10 +8,8 @@
 //! or [`crate::Keyspace::first_key_value`].
 //!
 //! - [`Str`] and [`Bytes`] sort lexicographically.
-//! - Unsigned integers sort numerically only with [`byteorder::BigEndian`];
-//!   [`byteorder::LittleEndian`] and [`byteorder::NativeEndian`] are better suited for values.
-//! - Signed integers and floats sort numerically with the `Ordered*` codecs,
-//!   like [`OrderedI32`] or [`OrderedF64`].
+//! - Numbers sort numerically with the `Ordered*` codecs, like [`OrderedU32`],
+//!   [`OrderedI32`] or [`OrderedF64`].
 //! - [`Terminated`] keeps the order of the codec it wraps, while [`SizedCodec`] doesn't.
 //!
 //! # Composing codecs

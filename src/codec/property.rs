@@ -162,10 +162,9 @@ where
 /// Only returns an error when `u` doesn't contain enough data to generate the inputs.
 ///
 /// ```
-/// use byteorder::BE;
-/// use fiole::codec::{Str, U32, check_order_preserving};
+/// use fiole::codec::{OrderedU32, Str, check_order_preserving};
 ///
-/// arbtest::arbtest(check_order_preserving::<U32<BE>, u32>);
+/// arbtest::arbtest(check_order_preserving::<OrderedU32, u32>);
 /// arbtest::arbtest(check_order_preserving::<Str, String>);
 /// ```
 pub fn check_order_preserving<C, O>(u: &mut Unstructured) -> arbitrary::Result<()>

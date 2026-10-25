@@ -1,7 +1,8 @@
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
 #[cfg(doc)]
 use crate::codec::{
-    OrderedF32, OrderedF64, OrderedI8, OrderedI16, OrderedI32, OrderedI64, OrderedI128,
+    OrderedF32, OrderedF64, OrderedI8, OrderedI16, OrderedI32, OrderedI64, OrderedI128, OrderedU16,
+    OrderedU32, OrderedU64, OrderedU128,
 };
 use byteorder::{ByteOrder, ReadBytesExt};
 
@@ -108,17 +109,18 @@ macro_rules! define_type {
         }
     };
     // Unsigned integers
-    ($name:ident, $native:ident, $read_method:ident, $write_method:ident) => {
+    ($name:ident, $native:ident, $read_method:ident, $write_method:ident, ordered: $ordered:ident) => {
         define_type!(
             @define $name, $native, $read_method, $write_method,
             ///
             /// /!\ When used as a key: only [`BigEndian`](byteorder::BigEndian) sorts like you would expect.
             /// [`LittleEndian`](byteorder::LittleEndian) and [`NativeEndian`](byteorder::NativeEndian)
             /// are better suited for values.
+            #[doc = concat!("[`", stringify!($ordered), "`] is an alias to the big-endian version.")]
         );
     };
     // Signed integers
-    ($name:ident, $native:ident, $read_method:ident, $write_method:ident, ordered: $ordered:ident) => {
+    ($name:ident, $native:ident, $read_method:ident, $write_method:ident, signed: $ordered:ident) => {
         define_type!(
             @define $name, $native, $read_method, $write_method,
             ///
@@ -145,14 +147,14 @@ macro_rules! define_type {
     };
 }
 
-define_type!(U16, u16, read_u16, write_u16);
-define_type!(U32, u32, read_u32, write_u32);
-define_type!(U64, u64, read_u64, write_u64);
-define_type!(U128, u128, read_u128, write_u128);
-define_type!(I16, i16, read_i16, write_i16, ordered: OrderedI16);
-define_type!(I32, i32, read_i32, write_i32, ordered: OrderedI32);
-define_type!(I64, i64, read_i64, write_i64, ordered: OrderedI64);
-define_type!(I128, i128, read_i128, write_i128, ordered: OrderedI128);
+define_type!(U16, u16, read_u16, write_u16, ordered: OrderedU16);
+define_type!(U32, u32, read_u32, write_u32, ordered: OrderedU32);
+define_type!(U64, u64, read_u64, write_u64, ordered: OrderedU64);
+define_type!(U128, u128, read_u128, write_u128, ordered: OrderedU128);
+define_type!(I16, i16, read_i16, write_i16, signed: OrderedI16);
+define_type!(I32, i32, read_i32, write_i32, signed: OrderedI32);
+define_type!(I64, i64, read_i64, write_i64, signed: OrderedI64);
+define_type!(I128, i128, read_i128, write_i128, signed: OrderedI128);
 define_type!(F32, f32, read_f32, write_f32, float: OrderedF32);
 define_type!(F64, f64, read_f64, write_f64, float: OrderedF64);
 
