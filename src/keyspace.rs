@@ -33,10 +33,13 @@ pub enum Prefixed {}
 ///
 /// # Prefixes
 ///
-/// fjall recommends using few keyspaces and separating the data with key
-/// prefixes rather than opening many keyspaces. Every `Keyspace` has a
-/// prefix, written before each of its keys and stripped when they're read
-/// back. The one returned by [`Database::keyspace`](crate::Database::keyspace)
+/// Every fjall keyspace comes with its own memtable, buffers and other
+/// internal state, so it's best to create one keyspace per storage pattern
+/// (different options, or data you want to drop in a single call) and to
+/// split the data inside it with key prefixes.
+///
+/// Every `Keyspace` has a prefix, written before each of its keys and
+/// stripped when they're read back. The one returned by [`Database::keyspace`](crate::Database::keyspace)
 /// has an empty prefix and is marked as [`Root`]. [`Keyspace::prefixed`] and
 /// [`Keyspace::prefixed_raw`] return a [`Prefixed`] keyspace whose prefix is
 /// the one of the current keyspace followed by the given bytes. They can be
@@ -67,8 +70,11 @@ pub enum Prefixed {}
 ///
 /// The prefixes are simply concatenated, avoiding collisions is up to you: the
 /// prefix `ab` followed by the key `c` gives the same bytes as the prefix `a`
-/// followed by the key `bc`. Using prefixes of a fixed size, or encoded with a
-/// [`SelfDelimiting`](crate::codec::SelfDelimiting) codec, avoids that.
+/// followed by the key `bc`. Ending the prefixes with `\0`, giving them a
+/// fixed size, or encoding them with a
+/// [`SelfDelimiting`](crate::codec::SelfDelimiting) codec keeps sibling
+/// prefixes apart, but a keyspace can still write keys that fall under the
+/// prefix of one of its children.
 ///
 /// fjall keys can't be longer than 65535 bytes, and that includes the prefix:
 /// every method taking a key panics if the prefix followed by the encoded key

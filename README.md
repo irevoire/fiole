@@ -46,3 +46,73 @@ assert_eq!(ret, Some(0));
 let ret = ks.get(&rtxn, "five").unwrap();
 assert_eq!(ret, Some(5));
 ```
+
+# Prefixed keyspaces
+
+Fiole gives you the ablity to create "fake" keyspaces living inside of a "root"
+keyspaces. All their keys are prefixed by used defined bytes, and they gives
+you a seamless window into the root keyspace.
+
+Every fjall keyspace comes with its own memtable, buffers and other internal
+state, so each new keyspace uses memory that could have served a single one.
+A good rule of thumb is to create one keyspace per storage pattern you need:
+the data that needs different options (e.g. key-value separation or not), or
+that you want to be able to drop in a single call. Inside a keyspace, split
+your data with key prefixes.
+
+In `fiole` every [`Keyspace`] has a prefix. The one returned by
+[`Database::keyspace`] has an empty prefix, and [`Keyspace::prefixed_raw`] or
+[`Keyspace::prefixed`] (which encodes the prefix with a codec) give you a new
+keyspace whose keys all start with a prefix. The prefix is written before
+every key and stripped when reading them back, and you can chain them as much
+as you want.
+
+```rust
+use fiole::{KeyspaceCreateOptions, Database};
+use fiole::byteorder::BigEndian;
+use fiole::codec::{Str, U32};
+
+let dir = tempfile::tempdir().unwrap();
+let db = Database::builder(dir.path()).unwrap();
+let root = db.keyspace::<Str, Str>("data", KeyspaceCreateOptions::default).unwrap();
+
+// Ending the prefixes with `\0` is a good default to keep sibling prefixes apart
+let users = root.prefixed_raw(b"users\0");
+let posts = root.prefixed_raw(b"posts\0");
+// Prefixes can be chained and encoded with any codec
+let tamo = users.prefixed::<U32<BigEndian>>(&42).unwrap();
+
+let mut wtxn = db.write_tx().unwrap();
+tamo.insert(&mut wtxn, "name", "Tamo").unwrap();
+posts.insert(&mut wtxn, "hello", "Hello world").unwrap();
+
+// Every method only sees the keys of its own prefix
+assert_eq!(tamo.get(&wtxn, "name").unwrap().as_deref(), Some("Tamo"));
+assert_eq!(posts.iter(&wtxn).count(), 1);
+assert_eq!(users.get(&wtxn, "name").unwrap(), None);
+
+// The keys are returned without their prefix, `raw_key` gives the full key
+let guard = tamo.iter(&wtxn).next().unwrap();
+assert_eq!(&*guard.raw_key().unwrap(), b"users\0\0\0\0\x2aname");
+
+// Clearing a keyspace removes its keys and the ones of the keyspaces prefixed from it
+users.clear(&mut wtxn).unwrap();
+assert!(tamo.is_empty(&wtxn).unwrap());
+assert_eq!(posts.len(&wtxn).unwrap(), 1);
+wtxn.commit().unwrap().unwrap();
+```
+
+A few things to keep in mind:
+
+- A keyspace doesn't know if it has prefixes and will iterate on all of it's
+  keys, including the one of its inner keyspaces.
+- The prefixes are simply concatenated, avoiding collisions is up to you: the
+  prefix `ab` followed by the key `c` is the same key as the prefix `a`
+  followed by the key `bc`. Ending your prefixes with `\0`, or giving them a
+  fixed size, keeps sibling prefixes apart: `users\0` and `users2\0` can't
+  overlap. A keyspace can still write keys that fall under the prefix of one
+  of its children, e.g. `users` writing the key `\0\0\0\x2aname`.
+- The prefix counts toward the 65535 bytes fjall allows per key, the methods
+  taking a key panic if the prefix followed by the key is longer.
+- The methods working on the whole fjall keyspace, like
+  [`Keyspace::approximate_len`], are only available on the root.
