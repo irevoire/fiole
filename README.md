@@ -18,14 +18,14 @@ See all the codec availabe at [`codec`].
 ```rust
 use std::fs;
 use std::path::Path;
-use fiole::{Keyspace, KeyspaceCreateOptions, Database};
+use fiole::{KeyspaceCreateOptions, Database};
 use fiole::codec::{Str, U32};
 
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(&dir.path()).unwrap();
 
 // Any byte order is fine for a value, but `byteorder::BigEndian` is better suited for keys if you want them to be sorted numerically
-let ks: Keyspace<Str, U32<byteorder::NativeEndian>> = db.keyspace("Hey you!", || KeyspaceCreateOptions::default()).unwrap();
+let ks = db.keyspace::<Str, U32<byteorder::NativeEndian>>("Hey you!", KeyspaceCreateOptions::default).unwrap();
 
 // opening a write transaction
 let mut wtxn = db.write_tx().unwrap();

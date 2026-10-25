@@ -176,6 +176,16 @@ impl EncodingVec<Fresh> {
             marker: PhantomData,
         }
     }
+
+    /// Starts a buffer with `prefix` already written. The codecs only see
+    /// what comes after it, so they can't read or modify it.
+    pub(crate) fn with_prefix(prefix: &[u8]) -> Self {
+        Self {
+            vec: prefix.to_vec(),
+            start_at: prefix.len(),
+            marker: PhantomData,
+        }
+    }
 }
 
 /// Space reserved by [`EncodingVec::save_space_for_later`], to be filled with

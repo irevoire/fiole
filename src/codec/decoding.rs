@@ -53,6 +53,13 @@ impl<'a> DecodingVec<'a> {
         }
     }
 
+    /// Reads `bytes` without copying them.
+    pub(crate) fn borrowed(bytes: &'a [u8]) -> Self {
+        Self {
+            cursor: Cursor::new(Cow::Borrowed(bytes)),
+        }
+    }
+
     /// Equivalent to [`std::io::Read::take`] except it return a `DecodingVec` which can be used within another codec.
     pub fn take_next<'b>(&'b mut self, size: usize) -> DecodingVec<'b> {
         let current_pos = self.cursor.position() as usize;

@@ -1,9 +1,9 @@
 use std::{fmt, marker::PhantomData, path::Path};
 
 use byteview::StrView;
-use fjall::{KeyspaceCreateOptions, OptimisticTxDatabase, PersistMode};
+use fjall::{KeyspaceCreateOptions, OptimisticTxDatabase, PersistMode, Slice};
 
-use crate::{Keyspace, Rtxn, Wtxn};
+use crate::{Keyspace, Root, Rtxn, Wtxn};
 
 /// Wrapper around a [`fjall::OptimisticTxDatabase`].
 ///
@@ -87,6 +87,9 @@ impl Database {
     ///
     /// The keyspace must be typed with a [`crate::codec`].
     ///
+    /// The returned keyspace is the [`Root`] of the fjall keyspace, with an
+    /// empty prefix. See [the prefixes section](Keyspace#prefixes) to split it.
+    ///
     /// ```
     /// use fiole::{Database, KeyspaceCreateOptions};
     /// use fiole::codec::Str;
@@ -108,9 +111,10 @@ impl Database {
         &self,
         name: &str,
         create_options: impl FnOnce() -> KeyspaceCreateOptions,
-    ) -> Result<Keyspace<Key, Value>, fjall::Error> {
+    ) -> Result<Keyspace<Key, Value, Root>, fjall::Error> {
         Ok(Keyspace {
             inner: self.inner.keyspace(name, create_options)?,
+            prefix: Slice::empty(),
             marker: PhantomData,
         })
     }
