@@ -1,4 +1,4 @@
-use std::{convert::Infallible, marker::PhantomData};
+use std::{convert::Infallible, fmt, marker::PhantomData};
 
 use crate::codec::{Decode, DecodingVec};
 
@@ -8,10 +8,9 @@ use crate::codec::{Decode, DecodingVec};
 /// actually needs to be decoded (e.g. based on the key).
 ///
 /// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
-#[derive(Default)]
 pub struct LazyDecode<C>(std::marker::PhantomData<C>);
 
-impl<C: 'static> Decode for LazyDecode<C> {
+impl<C> Decode for LazyDecode<C> {
     type Item = Lazy<C>;
     type Error = Infallible;
 
@@ -21,9 +20,14 @@ impl<C: 'static> Decode for LazyDecode<C> {
 }
 
 /// Owns bytes that can be decoded on demand.
-#[derive(Debug)]
 #[repr(transparent)]
 pub struct Lazy<C>(Vec<u8>, PhantomData<C>);
+
+impl<C> fmt::Debug for Lazy<C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Lazy").field(&self.0).finish()
+    }
+}
 
 impl<C> Clone for Lazy<C> {
     fn clone(&self) -> Self {
@@ -42,5 +46,45 @@ impl<C: Decode> Lazy<C> {
     /// Decode the given bytes according to the codec.
     pub fn decode(self) -> Result<C::Item, C::Error> {
         C::decode(&mut DecodingVec::new(self.0))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::codec::{Decode, DecodingVec, Encode, Str};
+
+    use super::{Lazy, LazyDecode};
+
+    /// A codec that doesn't implement `Debug`, like every codec.
+    enum NotDebug {}
+
+    impl Decode for NotDebug {
+        type Item = ();
+        type Error = std::convert::Infallible;
+
+        fn decode(bytes: &mut DecodingVec) -> Result<(), Self::Error> {
+            bytes.skip_to_end();
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn debug_doesnt_require_a_debug_codec() {
+        let lazy = LazyDecode::<NotDebug>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap();
+        assert_eq!(format!("{lazy:?}"), "Lazy([1, 2])");
+        let _: Lazy<NotDebug> = lazy;
+    }
+
+    #[test]
+    fn decode_doesnt_require_a_static_codec() {
+        // `&'a Str` isn't `'static`
+        fn decode<'a>(bytes: &'a [u8]) -> String {
+            let mut bytes = DecodingVec::new(bytes.to_vec());
+            let lazy = LazyDecode::<&'a Str>::decode(&mut bytes).unwrap();
+            lazy.decode().unwrap()
+        }
+
+        let bytes = Str::encode_alloc("hello").unwrap().finish();
+        assert_eq!(decode(&bytes), "hello");
     }
 }

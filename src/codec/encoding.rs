@@ -131,7 +131,7 @@ impl<T> EncodingVec<T> {
     }
 
     /// Whether the current codec wrote nothing yet.
-    pub fn is_empty(self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.vec.len() == self.start_at
     }
 
@@ -207,6 +207,11 @@ impl EncodingVec<Dirty> {
     /// Appends all the bytes of `other` at the end.
     pub fn append(&mut self, mut other: Vec<u8>) {
         self.vec.append(&mut other)
+    }
+
+    /// Appends a copy of all the bytes of `other` at the end.
+    pub fn extend_from_slice(&mut self, other: &[u8]) {
+        self.vec.extend_from_slice(other)
     }
 
     /// Inserts a byte at `index` in the bytes of the current codec.
@@ -299,6 +304,27 @@ mod test {
     use byteorder::BE;
 
     use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8, U32};
+
+    #[test]
+    fn is_empty_borrows() {
+        let vec = EncodingVec::new();
+        assert!(vec.is_empty());
+        // `is_empty` must not consume the buffer
+        let mut vec = vec.edit();
+        vec.push(1);
+        assert!(!vec.is_empty());
+        assert_eq!(vec.finish(), [1]);
+    }
+
+    #[test]
+    fn extend_from_slice() {
+        let mut vec = EncodingVec::new().edit();
+        vec.push(1);
+        vec.extend_from_slice(&[2, 3]);
+        vec.extend_from_slice(&[]);
+        assert_eq!(&*vec, [1, 2, 3]);
+        assert_eq!(vec.finish(), [1, 2, 3]);
+    }
 
     #[test]
     fn pop() {

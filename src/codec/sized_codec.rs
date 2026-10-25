@@ -11,6 +11,10 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiti
 /// it works whatever bytes the inner codec writes. Values whose encoding is
 /// bigger than 4 GiB aren't supported.
 ///
+/// # Panics
+///
+/// Encoding panics if the inner codec writes more than [`u32::MAX`] bytes.
+///
 /// ```
 /// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Str, U8};
 ///
@@ -54,8 +58,11 @@ impl<C: Encode> Encode for SizedCodec<C> {
         let mut ret = C::encode(ret.make_fresh(), item)?;
         let size = ret.absolute_pos() - pos;
 
+        let size = u32::try_from(size).unwrap_or_else(|_| {
+            panic!("SizedCodec can't encode more than 4 GiB, got {size} bytes")
+        });
         let bytes = ret.retrieve_space(token);
-        byteorder::BE::write_u32(bytes, size as u32);
+        byteorder::BE::write_u32(bytes, size);
 
         Ok(ret)
     }
@@ -108,6 +115,46 @@ impl<C: Decode> Decode for SizedCodec<C> {
 #[cfg(test)]
 mod test {
     use crate::codec::{Bytes, Decode, DecodingVec, Encode, SizedCodec, SizedCodecError, Str};
+
+    /// Writes as many zeros as its item says.
+    ///
+    /// The zeros come from `vec![0; _]`, which the OS gives lazily: the pages
+    /// that are never touched don't use any memory, so it can write gigabytes.
+    #[cfg(target_pointer_width = "64")]
+    enum Zeros {}
+
+    #[cfg(target_pointer_width = "64")]
+    impl Encode for Zeros {
+        type Item = usize;
+        type Error = std::convert::Infallible;
+
+        fn encode(
+            into: crate::codec::EncodingVec<crate::codec::Fresh>,
+            len: &usize,
+        ) -> Result<crate::codec::EncodingVec<crate::codec::Fresh>, Self::Error> {
+            let mut ret = into.edit();
+            let mut zeros = vec![0; ret.vec.len() + len];
+            zeros[..ret.vec.len()].copy_from_slice(&ret.vec);
+            ret.vec = zeros;
+            Ok(ret.make_fresh())
+        }
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn encode_up_to_4_gib() {
+        let size = u32::MAX as usize;
+        let bytes = SizedCodec::<Zeros>::encode_alloc(&size).unwrap().finish();
+        assert_eq!(bytes.len(), 4 + size);
+        assert_eq!(bytes[..4], u32::MAX.to_be_bytes());
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    #[should_panic(expected = "SizedCodec can't encode more than 4 GiB, got 4294967296 bytes")]
+    fn encode_more_than_4_gib_panics() {
+        let _ = SizedCodec::<Zeros>::encode_alloc(&(u32::MAX as usize + 1));
+    }
 
     #[test]
     fn sized() {

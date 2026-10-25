@@ -54,40 +54,7 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ---
 
-## 🟢 New codecs for keys
-
-### T14 Escaped variant of `Terminated` (optional)
-
-- **Done:** `Terminated<C, T: Terminator = Nul>` (`src/codec/terminated.rs`)
-  stores ordered string keys; the inner codec can't produce the pattern.
-- **Follow-up (optional):** an escaped variant accepting any byte: encode `0x00`
-  as `00 FF`, terminate with `00 00` (FoundationDB tuple layer style). Keeps
-  the order and never fails to encode, at the cost of a copy when decoding.
-
----
-
-## 🟡 API and design
-
-### T22 `Database::builder` is not a builder
-
-- **Where:** `src/database.rs`.
-- **Do:** ask the owner before implementing (API decision). Proposal: add a
-  `DatabaseBuilder` wrapping `fjall::…Builder`, exposing its config methods and
-  `open()`; keep `Database::open(path)` as a shortcut. The existing doc comment
-  already says "In the future it should return a [`fjall::DatabaseBuilder`]".
-
 ## ⚪ Minor issues and nitpicks
-
-### T25 Small correctness/API nits in codecs
-
-- `EncodingVec::is_empty(self)` takes `self` by value → `&self`
-  (`src/codec/encoding.rs:83`; clippy `len_without_is_empty`).
-- `SizedCodec::encode` does `size as u32` silently; return an error (or
-  `debug_assert`/panic with a message) when `size > u32::MAX`.
-- `Lazy<C>` derives `Debug`, which requires `C: Debug` (codecs never implement
-  it) → manual `impl<C> Debug`. `LazyDecode<C: 'static>`: drop the `'static`
-  bound; drop the useless `#[derive(Default)]` (`src/codec/lazy.rs`).
-- `EncodingVec::append(Vec<u8>)` → also add/replace with `extend_from_slice(&[u8])`.
 
 ### T27 Cargo / CI hygiene
 
@@ -134,7 +101,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## Suggested order
 
-1. API task T22 (needs the owner's decision).
-2. Nits T25, T27–T30.
+1. Nits T27–T30.
 
 Dependencies: T27's clippy CI job needs T30 first.
