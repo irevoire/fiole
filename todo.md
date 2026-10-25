@@ -56,27 +56,6 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## ⚪ Minor issues and nitpicks
 
-### T27 Cargo / CI hygiene
-
-- `facet-format` is a dependency enabled by the facet features but never used
-  in `src/` → remove it from `Cargo.toml` (and from the feature lists). Verify
-  with `cargo build --features facet_json` etc.
-- `facet` forces `jiff02` and `uuid` features on every user → move them behind
-  opt-in features or drop them (ask owner).
-- Add `rust-version` to `Cargo.toml` (edition 2024 ⇒ at least 1.85).
-- Trailing space in the `description` field.
-- CI (`.github/workflows/ci.yml`): add a `cargo clippy --all-features
-  --all-targets -- -D warnings` job (clippy is clean, also per feature), a
-  `RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps` job, and a
-  matrix building each feature alone (`--no-default-features --features <f>`).
-
-### T28 Naming consistency
-
-- `ComposeCodecError1::unwrap_error_1` vs macro-generated `unwrap_C1`, `unwrap_C2`…
-  → rename to `unwrap_C1` (breaking; or add an alias).
-- `Str {}` and `Unit {}` are constructible empty structs while other codecs are
-  uninhabited enums → make them `pub enum Str {}` / `pub enum Unit {}`.
-
 ### T29 Missing features
 
 - `Keyspace::prefix` requires a full `Key::Item`, so you can't prefix-search by
@@ -87,4 +66,4 @@ self-contained so it can be picked up independently by an agent or a human.
 
 ## Suggested order
 
-1. Nits T27–T29.
+1. T29 (needs the owner's decision).

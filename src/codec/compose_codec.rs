@@ -59,8 +59,8 @@ pub enum ComposeCodecError1<C1> {
 }
 
 impl<C1> ComposeCodecError1<C1> {
-    pub fn unwrap_error_1(self) -> C1 {
-        #[allow(nonstandard_style)]
+    #[allow(nonstandard_style)]
+    pub fn unwrap_C1(self) -> C1 {
         match self {
             Self::C1(C1) => C1,
             #[allow(unused)]
@@ -207,8 +207,18 @@ mod test {
 
     use crate::codec::{
         Bytes, ComposeCodec, ComposeCodecError2, Decode, DecodingVec, Encode, EncodingVec, Fresh,
-        SizedCodec, Str, U8,
+        NonEmptyError, SizedCodec, Str, U8, Unit,
     };
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn unwrap_C1_is_named_like_the_other_unwraps() {
+        let error = ComposeCodec::<(Unit,)>::decode(&mut DecodingVec::new(vec![1])).unwrap_err();
+        let _: NonEmptyError = error.unwrap_C1();
+        let error =
+            ComposeCodec::<(U8, Unit)>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap_err();
+        let _: NonEmptyError = error.unwrap_C2();
+    }
 
     #[test]
     fn compose_simple_test() {

@@ -5,7 +5,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Describe a raw string without len or termination byte.
 ///
 /// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
-pub struct Str {}
+pub enum Str {}
 
 impl Encode for Str {
     type Item = str;
@@ -32,7 +32,7 @@ impl Decode for Str {
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{Str, check_round_trip};
+    use crate::codec::{check_round_trip, Str};
 
     #[test]
     fn round_trip() {

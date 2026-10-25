@@ -12,7 +12,7 @@ use std::error::Error as StdError;
 ///
 /// ComposeCodec::<(Unit, U8)>::decode(&mut DecodingVec::new(vec![1])).unwrap();
 /// ```
-pub struct Unit {}
+pub enum Unit {}
 
 impl Encode for Unit {
     type Item = ();
@@ -54,8 +54,8 @@ impl StdError for NonEmptyError {}
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Terminated, U8, Unit,
-        check_round_trip,
+        check_round_trip, ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Terminated, Unit,
+        U8,
     };
 
     #[test]
