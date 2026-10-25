@@ -7,7 +7,7 @@
 //! that's the order used by [`crate::Keyspace::range`], [`crate::Keyspace::iter`]
 //! or [`crate::Keyspace::first_key_value`].
 //!
-//! - [`Str`] and [`Bytes`] sort lexicographically.
+//! - [`Str`] and [`Bytes`] and [`Text`] sort lexicographically.
 //! - Numbers sort numerically with the `Ordered*` codecs, like [`OrderedU32`],
 //!   [`OrderedI32`] or [`OrderedF64`].
 //! - [`Terminated`] keeps the order of the codec it wraps, while [`SizedCodec`] doesn't.
@@ -21,7 +21,7 @@
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
 //!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
-//! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Unit`],
+//! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
 //!
 //! Every element of a [`ComposeCodec`] except the last one must be
@@ -68,6 +68,8 @@ mod str;
 pub use str::*;
 mod terminated;
 pub use terminated::*;
+mod text;
+pub use text::*;
 mod unit;
 pub use unit::*;
 #[cfg(any(test, feature = "arbitrary"))]
