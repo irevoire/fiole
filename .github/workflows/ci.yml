@@ -35,3 +35,46 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
       - run: cargo clippy --all-targets --all-features -- -D warnings
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo doc --all-features --no-deps
+  features:
+    name: Feature ${{ matrix.feature }} alone
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - arbitrary
+          - facet_json
+          - facet_postcard
+          - facet_msgpack
+          - serde_json
+          - serde_postcard
+          - serde_msgpack
+          - roaring
+          - jiff02
+          - uuid
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo clippy --all-targets --no-default-features --features ${{ matrix.feature }} -- -D warnings
+  no_features:
+    name: No feature
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo clippy --all-targets --no-default-features -- -D warnings
+  msrv:
+    name: Minimum supported Rust version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.90 && rustup default 1.90
+      - run: cargo test --all-targets --all-features
