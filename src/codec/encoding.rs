@@ -194,6 +194,12 @@ impl EncodingVec<Fresh> {
         self.start_at = self.vec.len();
     }
 
+    /// Same as [`EncodingVec::insert_repeated`], with the bytes of `slice`.
+    pub(crate) fn insert_slice(&mut self, index: usize, slice: &[u8]) {
+        self.vec.splice(index..index, slice.iter().copied());
+        self.start_at = self.vec.len();
+    }
+
     /// Starts a buffer with `prefix` already written, and room for
     /// `headroom` more bytes. The codecs only see what comes after the
     /// prefix, so they can't read or modify it.

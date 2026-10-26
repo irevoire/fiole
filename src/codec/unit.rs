@@ -76,7 +76,7 @@ mod test {
     fn wrapped_in_the_middle_of_a_compose() {
         type WithSize = ComposeCodec<(SizedCodec<Unit>, U8)>;
         let bytes = WithSize::encode_alloc(&((), 7)).unwrap().finish();
-        assert_eq!(bytes, [0, 0, 0, 0, 7]);
+        assert_eq!(bytes, [0, 7]);
         assert_eq!(
             WithSize::decode(&mut DecodingVec::new(bytes)).unwrap(),
             ((), 7)

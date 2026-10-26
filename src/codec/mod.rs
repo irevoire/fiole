@@ -9,7 +9,8 @@
 //!
 //! - [`Str`] and [`Bytes`] and [`Text`] sort lexicographically.
 //! - Numbers sort numerically with the `Ordered*` codecs, like [`OrderedU32`],
-//!   [`OrderedI32`] or [`OrderedF64`].
+//!   [`OrderedI32`] or [`OrderedF64`]. Unsigned numbers also sort numerically
+//!   with the `VarU*` codecs, like [`VarU64`], that write them on as few bytes as possible.
 //! - [`Terminated`] keeps the order of the codec it wraps, while [`SizedCodec`] doesn't.
 //!
 //! # Composing codecs
@@ -19,7 +20,7 @@
 //! bytes end:
 //!
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
-//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], [`Fixed`], [`Constant`], a
+//!   the integers, the `Ordered*` and `VarU*` codecs, [`SizedCodec`], [`Terminated`], [`Fixed`], [`Constant`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`Optional`], [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
@@ -28,7 +29,8 @@
 //! self-delimiting: using a final codec anywhere else is a compile error. To
 //! put a final codec anywhere, wrap it:
 //!
-//! - [`SizedCodec`] writes the length of the inner codec on 4 bytes before it.
+//! - [`SizedCodec`] writes the length of the inner codec as a [`VarU64`] before it,
+//!   a single byte for up to 127 bytes.
 //!   It works with every codec, but doesn't keep the order of the keys.
 //! - [`Terminated`] writes a pattern after the inner codec, a single `0x00` byte by
 //!   default. It keeps the order of the keys, but can't encode a value whose
@@ -82,6 +84,8 @@ mod text;
 pub use text::*;
 mod unit;
 pub use unit::*;
+mod varint;
+pub use varint::*;
 #[cfg(any(test, feature = "arbitrary"))]
 mod property;
 #[cfg(any(test, feature = "arbitrary"))]
