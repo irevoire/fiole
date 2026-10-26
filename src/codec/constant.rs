@@ -8,7 +8,8 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Pattern, Sel
 /// Decoding checks the bytes start with the pattern, reads them, and fails with a [`MissingConstantError`] otherwise.
 /// It knows where it ends, so it can be used anywhere in a tuple of codecs, and keeps the order of what follows it.
 /// When used as a separator, you should prefer using `Terminated` which also make sure your inner codec doesn't
-/// contains the separator.
+/// contains the separator, or [`Preceded`](crate::codec::Preceded) before a codec that knows where it ends,
+/// which doesn't requires to add a `()` to the item.
 ///
 /// ```
 /// use fiole::codec::{Constant, Decode, DecodingVec, Encode, Nul, U8};

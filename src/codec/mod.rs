@@ -19,8 +19,9 @@
 //! To decode it back, each codec must know where its own bytes end except the last:
 //!
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
-//!   the integers, the `Ordered*` and `VarU*` codecs, [`SizedCodec`], [`Terminated`], [`Fixed`], [`Constant`], a
-//!   tuple of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
+//!   the integers, the `Ordered*` and `VarU*` codecs, [`SizedCodec`], [`Terminated`],
+//!   [`Fixed`], [`Constant`], [`Preceded`] when its inner codec is, a tuple of
+//!   self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`Optional`], [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
 //!
@@ -110,6 +111,8 @@ mod integer;
 pub use integer::*;
 mod optional;
 pub use optional::*;
+mod preceded;
+pub use preceded::*;
 mod ordered;
 pub use ordered::*;
 mod pattern;
