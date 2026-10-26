@@ -1,3 +1,4 @@
+use byteview::ByteView;
 use fjall::Readable as _;
 use fjall::{OptimisticTxKeyspace, Slice};
 use std::{
@@ -261,6 +262,44 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     ) -> Result<Keyspace<Key, Value, Prefixed>, C::Error> {
         let prefix = C::encode(EncodingVec::with_prefix(&self.prefix, 0), prefix)?;
         Ok(self.with_prefix(prefix.into_fjall_slice()))
+    }
+
+    /// Decodes `key`, a key as it's stored in fjall, prefix included, if
+    /// it's a key of this keyspace: `None` when it doesn't start with the
+    /// prefix of this keyspace, and the rest decoded with the key codec
+    /// otherwise.
+    ///
+    /// It's useful to tell which keyspace a key read from a broader one
+    /// belongs to. A [`ByteView`] or a [`Slice`] read from fjall is shared,
+    /// not copied.
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{Bytes, OrderedU32, Str}};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder).unwrap();
+    /// let ks = db.keyspace::<Bytes, Str>("default", KeyspaceCreateOptions::default).unwrap();
+    /// let users = ks.prefixed_raw(b"user\0").remap_key_type::<OrderedU32>();
+    /// let names = ks.prefixed_raw(b"name\0").remap_key_type::<Str>();
+    ///
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// users.insert(&mut wtxn, &42, "Tamo").unwrap();
+    ///
+    /// for guard in ks.iter(&wtxn) {
+    ///     let (key, _) = guard.into_inner().unwrap();
+    ///     assert_eq!(users.decode_key(key.clone()).unwrap().unwrap(), 42);
+    ///     assert!(names.decode_key(key).is_none());
+    /// }
+    /// ```
+    pub fn decode_key(&self, key: impl Into<ByteView>) -> Option<Result<Key::Item, Key::Error>>
+    where
+        Key: Decode,
+    {
+        let key = key.into();
+        if !key.starts_with(&self.prefix) {
+            return None;
+        }
+        Some(Key::decode(&mut key.slice(self.prefix.len()..).into()))
     }
 
     #[inline]
@@ -1642,5 +1681,42 @@ mod test {
         assert_eq!(keys(root.range(&rtxn, &bounds).unwrap()), [2, 3]);
         let bounds = (Excluded(&1), Unbounded);
         assert_eq!(keys(root.range(&rtxn, &bounds).unwrap()), [2, 3]);
+    }
+
+    #[test]
+    fn decode_key_only_decodes_the_keys_under_the_prefix() {
+        let (_dir, _db, root) = setup();
+        let a = root.prefixed_raw(&b"a\0"[..]);
+        let ab = a.prefixed_raw(&b"b\0"[..]);
+
+        // The root has no prefix: every key is one of its keys
+        assert_eq!(root.decode_key(&b"\x07"[..]).unwrap().unwrap(), 7);
+        assert_eq!(a.decode_key(&b"a\0\x07"[..]).unwrap().unwrap(), 7);
+        assert_eq!(ab.decode_key(&b"a\0b\0\x07"[..]).unwrap().unwrap(), 7);
+        assert!(a.decode_key(&b"b\0\x07"[..]).is_none());
+        assert!(ab.decode_key(&b"a\0\x07"[..]).is_none());
+        // Under the prefix, but not a key of the codec
+        assert!(a.decode_key(&b"a\0"[..]).unwrap().is_err());
+    }
+
+    #[test]
+    fn decode_key_shares_the_bytes_read_from_fjall() {
+        let (_dir, db, root) = setup();
+        let a = root.prefixed_raw(&b"a\0"[..]).remap_key_type::<Bytes>();
+        let mut wtxn = db.write_tx().unwrap();
+        a.insert(&mut wtxn, b"a key longer than the inline bytes", "value")
+            .unwrap();
+        let key = root
+            .remap_key_type::<Bytes>()
+            .iter(&wtxn)
+            .next()
+            .unwrap()
+            .raw_key()
+            .unwrap();
+
+        let (decoded, allocations) =
+            crate::test_alloc::allocations(|| a.decode_key(key).unwrap().unwrap());
+        assert_eq!(&*decoded, b"a key longer than the inline bytes");
+        assert_eq!(allocations, 0);
     }
 }
