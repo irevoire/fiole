@@ -34,7 +34,7 @@ impl Decode for Str {
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{check_round_trip, Str};
+    use crate::codec::{Str, check_round_trip};
 
     #[test]
     fn round_trip() {

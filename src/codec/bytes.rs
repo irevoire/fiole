@@ -32,7 +32,7 @@ impl Decode for Bytes {
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{check_round_trip, Bytes};
+    use crate::codec::{Bytes, check_round_trip};
 
     #[test]
     fn round_trip() {

@@ -19,7 +19,7 @@
 //! bytes end:
 //!
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
-//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], a
+//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], [`Constant`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
@@ -58,6 +58,8 @@ mod sized_codec;
 pub use sized_codec::*;
 mod compose_codec;
 pub use compose_codec::*;
+mod constant;
+pub use constant::*;
 mod lazy;
 pub use lazy::*;
 mod integer;
