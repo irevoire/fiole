@@ -68,6 +68,8 @@ mod optional;
 pub use optional::*;
 mod ordered;
 pub use ordered::*;
+mod pattern;
+pub use pattern::*;
 mod str;
 pub use str::*;
 mod terminated;

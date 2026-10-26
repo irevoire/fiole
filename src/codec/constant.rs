@@ -1,6 +1,6 @@
 use std::{convert::Infallible, fmt, marker::PhantomData};
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting, Terminator};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Pattern, SelfDelimiting};
 
 /// Describe the bytes that are always the same in a key or value.
 ///
@@ -24,7 +24,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiti
 /// ```
 pub struct Constant<P>(PhantomData<P>);
 
-impl<P: Terminator> Encode for Constant<P> {
+impl<P: Pattern> Encode for Constant<P> {
     type Item = ();
     type Error = Infallible;
 
@@ -38,7 +38,7 @@ impl<P: Terminator> Encode for Constant<P> {
     }
 }
 
-impl<P: Terminator> Decode for Constant<P> {
+impl<P: Pattern> Decode for Constant<P> {
     type Item = ();
     type Error = MissingConstantError;
 
@@ -69,13 +69,12 @@ impl std::error::Error for MissingConstantError {}
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Constant, Decode, DecodingVec, Encode, MissingConstantError, Nul, Terminator,
-        U8,
+        ComposeCodec, Constant, Decode, DecodingVec, Encode, MissingConstantError, Nul, Pattern, U8,
     };
 
     enum Arrow {}
 
-    impl Terminator for Arrow {
+    impl Pattern for Arrow {
         const PATTERN: &'static [u8] = b"->";
     }
 

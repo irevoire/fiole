@@ -63,8 +63,8 @@ impl<C: Decode> Decode for Optional<C> {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        check_round_trip, ComposeCodec, Constant, Decode, DecodingVec, Encode, Nul, Optional,
-        OrderedU32, Unit, U8,
+        ComposeCodec, Constant, Decode, DecodingVec, Encode, Nul, Optional, OrderedU32, U8, Unit,
+        check_round_trip,
     };
 
     #[test]

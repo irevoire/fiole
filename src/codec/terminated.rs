@@ -1,35 +1,8 @@
 use std::{fmt, marker::PhantomData};
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Nul, Pattern, SelfDelimiting};
 
-/// The pattern marking the end of a [`Terminated`] codec.
-///
-/// The pattern can't be empty: using an empty pattern fails to compile.
-///
-/// ```compile_fail,E0080
-/// use fiole::codec::{Bytes, Encode, Terminated, Terminator};
-///
-/// enum Empty {}
-///
-/// impl Terminator for Empty {
-///     const PATTERN: &'static [u8] = &[];
-/// }
-///
-/// Terminated::<Bytes, Empty>::encode_alloc(&[1, 2]).unwrap();
-/// ```
-pub trait Terminator {
-    /// The bytes written after the inner codec, that it must never write itself.
-    const PATTERN: &'static [u8];
-}
-
-/// Terminates a [`Terminated`] codec with a single `0x00` byte. It preserves the order of the inner codec.
-pub enum Nul {}
-
-impl Terminator for Nul {
-    const PATTERN: &'static [u8] = &[0];
-}
-
-/// Makes any codec [`SelfDelimiting`] by writing a [`Terminator`] pattern after it.
+/// Makes any codec [`SelfDelimiting`] by writing a [`Pattern`] after it.
 ///
 /// The format is the bytes of the inner codec `C`, followed by the pattern of
 /// `T` (a single `0x00` byte by default). The inner codec is forbidden to
@@ -68,11 +41,11 @@ impl Terminator for Nul {
 /// self-delimiting but doesn't keep the order of the inner codec.
 ///
 /// ```
-/// use fiole::codec::{Bytes, Decode, DecodingVec, Encode, Terminated, Terminator};
+/// use fiole::codec::{Bytes, Decode, DecodingVec, Encode, Pattern, Terminated};
 ///
 /// enum Separator {}
 ///
-/// impl Terminator for Separator {
+/// impl Pattern for Separator {
 ///     const PATTERN: &'static [u8] = b"\xFF\xFE";
 /// }
 ///
@@ -84,6 +57,20 @@ impl Terminator for Nul {
 ///
 /// // The pattern can't appear anywhere before the end, even partially overlapping the terminator
 /// assert!(Codec::encode_alloc(&[1, 0xFF, 0xFE, 2]).is_err());
+/// ```
+///
+/// The pattern can't be empty: using an empty pattern fails to compile.
+///
+/// ```compile_fail,E0080
+/// use fiole::codec::{Bytes, Encode, Pattern, Terminated};
+///
+/// enum Empty {}
+///
+/// impl Pattern for Empty {
+///     const PATTERN: &'static [u8] = &[];
+/// }
+///
+/// Terminated::<Bytes, Empty>::encode_alloc(&[1, 2]).unwrap();
 /// ```
 ///
 /// When used as a key, keep in mind that [`crate::Keyspace::prefix`] encodes
@@ -104,7 +91,7 @@ fn find(haystack: &[u8], pattern: &[u8]) -> Option<usize> {
     }
 }
 
-impl<C: Encode, T: Terminator> Encode for Terminated<C, T> {
+impl<C: Encode, T: Pattern> Encode for Terminated<C, T> {
     type Item = C::Item;
     type Error = TerminatedEncodeError<C::Error>;
 
@@ -138,7 +125,7 @@ impl<C: Encode, T: Terminator> Encode for Terminated<C, T> {
     }
 }
 
-impl<C: Decode, T: Terminator> Decode for Terminated<C, T> {
+impl<C: Decode, T: Pattern> Decode for Terminated<C, T> {
     type Item = C::Item;
     type Error = TerminatedDecodeError<C::Error>;
 
@@ -206,8 +193,8 @@ mod test {
     use crate::{
         Database,
         codec::{
-            Bytes, ComposeCodec, Decode, DecodingVec, Encode, Str, Terminated,
-            TerminatedDecodeError, TerminatedEncodeError, Terminator, U8, check_order_preserving,
+            Bytes, ComposeCodec, Decode, DecodingVec, Encode, Pattern, Str, Terminated,
+            TerminatedDecodeError, TerminatedEncodeError, U8, check_order_preserving,
             check_self_delimiting, check_self_delimiting_with,
         },
     };
@@ -215,7 +202,7 @@ mod test {
     /// A pattern that can overlap with itself.
     enum DoubleA {}
 
-    impl Terminator for DoubleA {
+    impl Pattern for DoubleA {
         const PATTERN: &'static [u8] = b"aa";
     }
 
