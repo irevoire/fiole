@@ -7,15 +7,15 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Decoding gives `None` when no bytes are left, and decodes the rest with `C` otherwise.
 /// That makes `None` sort before every `Some`. And it make `Some` keep the order of `C`.
 ///
-/// /!\ This codec is final: it needs to know whether anything is left, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec).
+/// /!\ This codec is final: it needs to know whether anything is left, so it can only be the last element of a tuple of codecs. To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec).
 ///
 /// /!\ A `Some` whose inner codec writes nothing, like `Some(())` or `Some("")`, is read back as `None`.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Constant, Decode, DecodingVec, Encode, Nul, Optional, Str, Terminated};
+/// use fiole::codec::{Constant, Decode, DecodingVec, Encode, Nul, Optional, Str, Terminated};
 ///
 /// // A name, then a `\0` and a nickname if there's one
-/// type Name<'a> = ComposeCodec<(&'a Terminated<Str>, Optional<ComposeCodec<(Constant<Nul>, &'a Str)>>)>;
+/// type Name<'a> = (&'a Terminated<Str>, Optional<(Constant<Nul>, &'a Str)>);
 ///
 /// let bytes = Name::encode_alloc(&("kefir", None)).unwrap().finish();
 /// assert_eq!(bytes, b"kefir\0");
@@ -63,7 +63,7 @@ impl<C: Decode> Decode for Optional<C> {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Constant, Decode, DecodingVec, Encode, Nul, Optional, OrderedU32, U8, Unit,
+        Constant, Decode, DecodingVec, Encode, Nul, Optional, OrderedU32, U8, Unit,
         check_round_trip,
     };
 
@@ -104,8 +104,8 @@ mod test {
     }
 
     #[test]
-    fn ends_a_compose() {
-        type Codec = ComposeCodec<(U8, Optional<ComposeCodec<(Constant<Nul>, U8)>>)>;
+    fn ends_a_tuple() {
+        type Codec = (U8, Optional<(Constant<Nul>, U8)>);
         for item in [(1, None), (1, Some(((), 2)))] {
             let bytes = Codec::encode_alloc(&item).unwrap().finish();
             assert_eq!(Codec::decode(&mut DecodingVec::new(bytes)).unwrap(), item);

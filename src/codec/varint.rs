@@ -87,7 +87,7 @@ macro_rules! define_varint {
         /// Each number has a single encoding: decoding refuses the ones that
         /// use more bytes than needed.
         ///
-        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         ///
         /// ```
         #[doc = concat!("use fiole::codec::{Decode, DecodingVec, Encode, ", stringify!($name), "};")]

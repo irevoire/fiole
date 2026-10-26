@@ -6,7 +6,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///
 /// The keys are sorted by their text, not by their value: `10` sorts before `9`.
 ///
-/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a tuple of codecs. To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 ///
 /// ```
 /// use std::net::Ipv4Addr;
@@ -86,8 +86,7 @@ impl<E: std::error::Error + 'static> std::error::Error for TextDecodeError<E> {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Decode, DecodingVec, Encode, Terminated, Text, TextDecodeError, U8,
-        check_round_trip,
+        Decode, DecodingVec, Encode, Terminated, Text, TextDecodeError, U8, check_round_trip,
     };
 
     #[test]
@@ -119,8 +118,8 @@ mod test {
     }
 
     #[test]
-    fn can_be_terminated_in_a_compose() {
-        type Codec = ComposeCodec<(Terminated<Text<u32>>, U8)>;
+    fn can_be_terminated_in_a_tuple() {
+        type Codec = (Terminated<Text<u32>>, U8);
         let bytes = Codec::encode_alloc(&(1234, 5)).unwrap().finish();
         assert_eq!(bytes, b"1234\0\x05");
         let decoded = Codec::decode(&mut DecodingVec::new(bytes)).unwrap();

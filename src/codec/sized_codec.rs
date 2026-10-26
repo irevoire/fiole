@@ -13,9 +13,9 @@ use crate::codec::{
 /// it works whatever bytes the inner codec writes.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, Str, U8};
+/// use fiole::codec::{Decode, DecodingVec, Encode, SizedCodec, Str, U8};
 ///
-/// type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8)>;
+/// type Codec<'a> = (&'a SizedCodec<Str>, U8);
 ///
 /// let bytes = Codec::encode_alloc(&("hi", 7)).unwrap().finish();
 /// assert_eq!(bytes, [2, b'h', b'i', 7]);
@@ -123,8 +123,8 @@ impl<C: Decode> Decode for SizedCodec<C> {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        Bytes, ComposeCodec, Decode, DecodingVec, Encode, SizedCodec, SizedCodecError, Str, U8,
-        VarU64, VarUintDecodeError, check_self_delimiting,
+        Bytes, Decode, DecodingVec, Encode, SizedCodec, SizedCodecError, Str, U8, VarU64,
+        VarUintDecodeError, check_self_delimiting,
     };
 
     #[test]
@@ -153,7 +153,7 @@ mod test {
 
     #[test]
     fn a_long_length_doesnt_shift_the_previous_codecs() {
-        type Codec<'a> = ComposeCodec<(U8, &'a SizedCodec<Bytes>, U8)>;
+        type Codec<'a> = (U8, &'a SizedCodec<Bytes>, U8);
 
         let value = vec![0xAB; 300];
         let bytes = Codec::encode_alloc(&(1, &value[..], 2)).unwrap().finish();

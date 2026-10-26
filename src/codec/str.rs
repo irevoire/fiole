@@ -6,7 +6,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
 /// Describe a raw string without len or termination byte.
 ///
-/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a tuple of codecs. To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub enum Str {}
 
 impl Encode for Str {

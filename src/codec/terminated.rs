@@ -15,12 +15,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Nul, Pattern
 /// when the pattern is only made of `0x00` bytes (like [`Nul`]) and the inner
 /// codec is itself ordered (`Str`, `Bytes`, `OrderedU32`, but not `U32<LE>`).
 /// That makes `Terminated<Str>` the codec of choice for ordered string keys,
-/// even in the middle of a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// even in the middle of a tuple of codecs.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, OrderedU32, Str, Terminated};
+/// use fiole::codec::{Decode, DecodingVec, Encode, OrderedU32, Str, Terminated};
 ///
-/// type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedU32)>;
+/// type Key<'a> = (&'a Terminated<Str>, OrderedU32);
 ///
 /// let bytes = Key::encode_alloc(&("hello", 42)).unwrap().finish();
 /// assert_eq!(bytes, b"hello\0\0\0\0\x2a");
@@ -75,7 +75,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Nul, Pattern
 ///
 /// When used as a key, keep in mind that [`crate::Keyspace::prefix`] encodes
 /// the whole prefix, terminator included: with `Terminated<Str>`, the prefix
-/// `"a"` only matches the key `"a"` (followed by anything in a compose), not
+/// `"a"` only matches the key `"a"` (followed by anything in a tuple of codecs), not
 /// every key starting with `"a"`.
 pub struct Terminated<C, T = Nul>(PhantomData<(C, T)>);
 
@@ -193,9 +193,9 @@ mod test {
     use crate::{
         Database,
         codec::{
-            Bytes, ComposeCodec, Decode, DecodingVec, Encode, Pattern, Str, Terminated,
-            TerminatedDecodeError, TerminatedEncodeError, U8, check_order_preserving,
-            check_self_delimiting, check_self_delimiting_with,
+            Bytes, Decode, DecodingVec, Encode, Pattern, Str, Terminated, TerminatedDecodeError,
+            TerminatedEncodeError, U8, check_order_preserving, check_self_delimiting,
+            check_self_delimiting_with,
         },
     };
 
@@ -305,7 +305,7 @@ mod test {
         let dir = tempfile::tempdir().unwrap();
         let database = Database::builder(dir.path()).unwrap();
         let ks = database
-            .keyspace::<ComposeCodec<(&'static Terminated<Str>, U8)>, U8>("hello", || {
+            .keyspace::<(&'static Terminated<Str>, U8), U8>("hello", || {
                 KeyspaceCreateOptions::default()
             })
             .unwrap();

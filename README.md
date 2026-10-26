@@ -69,7 +69,7 @@ as you want.
 
 ```rust
 use fiole::{KeyspaceCreateOptions, Database};
-use fiole::codec::{ComposeCodec, OrderedU32, Str};
+use fiole::codec::{OrderedU32, Str};
 
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(dir.path()).unwrap();
@@ -81,7 +81,7 @@ let posts = root.prefixed_raw(b"posts\0");
 // Prefixes can be chained, and specify the first part of a key made of parts:
 // here the fields of each user, by the id of the user then the name of the field
 let kefir = users
-    .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
+    .remap_key_type::<(OrderedU32, Str)>()
     .prefixed(&42)
     .unwrap();
 

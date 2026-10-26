@@ -7,7 +7,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// Encode a struct as json through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 /// /!\ Take care of the flattened struct and untyped enum. In some cases, they serialize correctly but fail to deserialize.
 ///
-/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a tuple of codecs. To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 ///
 /// ```
 /// use fiole::codec::{Decode, DecodingVec, Encode, SerdeJson};
@@ -30,12 +30,12 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// assert_eq!(decoded, kefir);
 /// ```
 ///
-/// It can't be followed by another codec in a [`ComposeCodec`](crate::codec::ComposeCodec):
+/// It can't be followed by another codec in a tuple of codecs:
 ///
 /// ```compile_fail,E0599
-/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, SerdeJson, U8};
+/// use fiole::codec::{Decode, DecodingVec, SerdeJson, U8};
 ///
-/// ComposeCodec::<(SerdeJson<u32>, U8)>::decode(&mut DecodingVec::new(b"12")).unwrap();
+/// <(SerdeJson<u32>, U8)>::decode(&mut DecodingVec::new(b"12")).unwrap();
 /// ```
 pub struct SerdeJson<T>(PhantomData<T>);
 
@@ -66,7 +66,7 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
 mod test {
     use serde::{Deserialize, Serialize};
 
-    use crate::codec::{ComposeCodec, Decode, DecodingVec, Encode, SerdeJson, SizedCodec, U8};
+    use crate::codec::{Decode, DecodingVec, Encode, SerdeJson, SizedCodec, U8};
 
     #[test]
     fn encode_and_decode() {
@@ -127,7 +127,7 @@ mod test {
 
     #[test]
     fn wrapped_in_sized_codec() {
-        type Codec = ComposeCodec<(SizedCodec<SerdeJson<u32>>, U8)>;
+        type Codec = (SizedCodec<SerdeJson<u32>>, U8);
         let buf = Codec::encode_alloc(&(12, 9)).unwrap();
         let mut decoder = buf.into_decoding_vec();
         assert_eq!(Codec::decode(&mut decoder).unwrap(), (12, 9));

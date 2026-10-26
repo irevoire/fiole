@@ -17,10 +17,10 @@ use crate::codec::{
 /// it costs no byte at all, and keeps the order of the inner codec.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Decode, DecodingVec, Encode, Fixed, OrderedU32, Str};
+/// use fiole::codec::{Decode, DecodingVec, Encode, Fixed, OrderedU32, Str};
 ///
 /// // A two-letter country code, then a number
-/// type Key<'a> = ComposeCodec<(&'a Fixed<2, Str>, OrderedU32)>;
+/// type Key<'a> = (&'a Fixed<2, Str>, OrderedU32);
 ///
 /// let bytes = Key::encode_alloc(&("fr", 42)).unwrap().finish();
 /// assert_eq!(bytes, b"fr\0\0\0\x2a");
@@ -410,9 +410,9 @@ mod test {
     use arbitrary::Unstructured;
 
     use crate::codec::{
-        Bytes, CharPattern, ComposeCodec, Decode, DecodingVec, Encode, Fixed, FixedDecodeError,
-        FixedEncodeError, Nul, OrderedU32, PadLeftKeep, PadLeftStripped, PadRightKeep,
-        PadRightStripped, Str, Terminated, Text, U8, U8Pattern, U16, U32, check_order_preserving,
+        Bytes, CharPattern, Decode, DecodingVec, Encode, Fixed, FixedDecodeError, FixedEncodeError,
+        Nul, OrderedU32, PadLeftKeep, PadLeftStripped, PadRightKeep, PadRightStripped, Str,
+        Terminated, Text, U8, U8Pattern, U16, U32, check_order_preserving,
         check_order_preserving_with, check_round_trip, check_self_delimiting,
         check_self_delimiting_with,
     };
@@ -485,8 +485,8 @@ mod test {
     }
 
     #[test]
-    fn can_be_followed_in_a_compose() {
-        type Codec = ComposeCodec<(Fixed<3, Text<u16>>, U8)>;
+    fn can_be_followed_in_a_tuple() {
+        type Codec = (Fixed<3, Text<u16>>, U8);
         let bytes = Codec::encode_alloc(&(123, 4)).unwrap().finish();
         assert_eq!(bytes, b"123\x04");
         assert_eq!(
@@ -581,8 +581,8 @@ mod test {
     }
 
     #[test]
-    fn padding_can_be_followed_in_a_compose() {
-        type Codec<'a> = ComposeCodec<(Number, &'a Name, &'a Id, U8)>;
+    fn padding_can_be_followed_in_a_tuple() {
+        type Codec<'a> = (Number, &'a Name, &'a Id, U8);
 
         let item = (42, "kefir", &[1, 2][..], 7);
         let bytes = Codec::encode_alloc(&item).unwrap().finish();

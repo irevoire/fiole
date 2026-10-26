@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 
 /// Encodable version of [`u8`].
 ///
-/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
 pub enum U8 {}
 
 impl Encode for U8 {
@@ -41,7 +41,7 @@ impl SelfDelimiting for U8 {}
 
 /// Encodable version of [`i8`].
 ///
-/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
 ///
 /// Encoded as two's complement.
 /// /!\ Be careful, when used as a key, negative numbers sort
@@ -77,7 +77,7 @@ macro_rules! define_type {
     (@define $name:ident, $native:ident, $read_method:ident, $write_method:ident, $(#[$doc:meta])*) => {
         #[doc = concat!("Encodable version of [`", stringify!($native), "`].")]
         ///
-        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         $(#[$doc])*
         pub struct $name<O>(PhantomData<O>);
 

@@ -15,17 +15,16 @@
 //!
 //! # Composing codecs
 //!
-//! A [`ComposeCodec`] encodes a tuple by writing the encoding of each element
-//! one after the other. To decode it back, each codec must know where its own
-//! bytes end:
+//! A tuple of codecs encodes each elements one after the other, with nothing in between.
+//! To decode it back, each codec must know where its own bytes end except the last:
 //!
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
 //!   the integers, the `Ordered*` and `VarU*` codecs, [`SizedCodec`], [`Terminated`], [`Fixed`], [`Constant`], a
-//!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
+//!   tuple of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`Optional`], [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
 //!
-//! Every element of a [`ComposeCodec`] except the last one must be
+//! Every element of a tuple of codecs except the last one must be
 //! self-delimiting: using a final codec anywhere else is a compile error. To
 //! put a final codec anywhere, wrap it:
 //!
@@ -39,17 +38,49 @@
 //!   order of the keys, but only encodes the values written on exactly `N` bytes.
 //!
 //! ```
-//! use fiole::codec::{Bytes, ComposeCodec, Decode, DecodingVec, Encode, OrderedI32, Str, Terminated};
+//! use fiole::codec::{Bytes, Decode, DecodingVec, Encode, OrderedI32, Str, Terminated};
 //!
 //! // A name, a signed number, then raw bytes: only the last element can be final.
-//! type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedI32, &'a Bytes)>;
+//! type Key<'a> = (&'a Terminated<Str>, OrderedI32, &'a Bytes);
 //!
 //! let bytes = Key::encode_alloc(&("kefir", -3, &[1, 2][..])).unwrap().finish();
 //! let (name, n, raw) = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
 //! assert_eq!((&*name, n, &*raw), ("kefir", -3, &[1, 2][..]));
+//!
+//! // A tuple of self-delimiting codecs can itself be followed by another codec
+//! type Nested = ((OrderedI32, OrderedI32), OrderedI32);
+//! let bytes = Nested::encode_alloc(&((1, 2), 3)).unwrap().finish();
+//! assert_eq!(Nested::decode(&mut DecodingVec::new(bytes)).unwrap(), ((1, 2), 3));
 //! ```
 //!
-//! A [`ComposeCodec`] of two elements or more is [`Split`] between it's head
+//! Without a type alias, the methods of a tuple of codecs are called with its
+//! type between angle brackets: `<(OrderedI32, Str)>::encode_alloc(&(1, "a"))`.
+//!
+//! A final codec can't be followed by anything when encoding:
+//!
+//! ```compile_fail,E0599
+//! use fiole::codec::{Encode, Str, U8};
+//!
+//! <(&Str, U8)>::encode_alloc(&("hello", 1)).unwrap();
+//! ```
+//!
+//! nor when decoding:
+//!
+//! ```compile_fail,E0599
+//! use fiole::codec::{Decode, DecodingVec, Str, U8};
+//!
+//! <(Str, U8)>::decode(&mut DecodingVec::new(vec![b'a', 1])).unwrap();
+//! ```
+//!
+//! even inside a nested tuple:
+//!
+//! ```compile_fail,E0599
+//! use fiole::codec::{Decode, DecodingVec, Str, U8};
+//!
+//! <((U8, Str), U8)>::decode(&mut DecodingVec::new(vec![1, b'a', 2])).unwrap();
+//! ```
+//!
+//! A tuple of codecs of two elements or more is [`Split`] between it's head
 //! (first element) and it's tail (the rest).
 //! [`crate::Keyspace::prefixed`] let's you specify the head and returns
 //! a keyspace now expecting the tail to be specified as its key.
@@ -67,8 +98,8 @@ mod sized_codec;
 pub use sized_codec::*;
 mod split;
 pub use split::*;
-mod compose_codec;
-pub use compose_codec::*;
+mod tuple;
+pub use tuple::*;
 mod constant;
 pub use constant::*;
 mod fixed;
@@ -131,7 +162,7 @@ pub use roaring::*;
 ///
 /// A self-delimiting codec decodes exactly the bytes it encoded and leaves the
 /// cursor on the first byte that follows, so it can be followed by another
-/// codec in a [`ComposeCodec`]. Every element of a [`ComposeCodec`] except the
+/// codec in a tuple of codecs. Every element of a tuple of codecs except the
 /// last one must implement this trait.
 ///
 /// Codecs that don't implement it are *final*: they decode everything till the
@@ -150,13 +181,13 @@ pub enum Unspecified {}
 /// Can be useful when working with [`crate::Guard`], but keep in mind that the bytes are still copied out of fjall before being ignored.
 /// Ideally, you should use the [`crate::Keyspace::contains_key`] or [`crate::Keyspace::size_of`] methods instead.
 ///
-/// /!\ This codec is final: it ignores everything till the end, so it can only be the last element of a [`ComposeCodec`].
-/// To ignore a field in the middle of a [`ComposeCodec`], wrap it like the field it ignores, e.g. `SizedCodec<DecodeIgnore>` or `Terminated<DecodeIgnore>`.
+/// /!\ This codec is final: it ignores everything till the end, so it can only be the last element of a tuple of codecs.
+/// To ignore a field in the middle of a tuple of codecs, wrap it like the field it ignores, e.g. `SizedCodec<DecodeIgnore>` or `Terminated<DecodeIgnore>`.
 ///
 /// ```compile_fail,E0599
-/// use fiole::codec::{ComposeCodec, Decode, DecodeIgnore, DecodingVec, U8};
+/// use fiole::codec::{Decode, DecodeIgnore, DecodingVec, U8};
 ///
-/// ComposeCodec::<(DecodeIgnore, U8)>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap();
+/// <(DecodeIgnore, U8)>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap();
 /// ```
 pub enum DecodeIgnore {}
 
@@ -173,7 +204,7 @@ impl Decode for DecodeIgnore {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Decode, DecodeIgnore, DecodingVec, Encode, EncodingVec, SizedCodec, Str, U8,
+        Decode, DecodeIgnore, DecodingVec, Encode, EncodingVec, SizedCodec, Str, U8,
     };
 
     #[test]
@@ -199,17 +230,17 @@ mod test {
         assert!(decoder.is_empty());
 
         let mut decoder = DecodingVec::new(vec![1, 2, 3]);
-        let decoded = ComposeCodec::<(U8, DecodeIgnore)>::decode(&mut decoder).unwrap();
+        let decoded = <(U8, DecodeIgnore)>::decode(&mut decoder).unwrap();
         assert_eq!(decoded, (1, ()));
         assert!(decoder.is_empty());
     }
 
     #[test]
-    fn decode_ignore_in_the_middle_of_a_compose() {
-        type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8)>;
+    fn decode_ignore_in_the_middle_of_a_tuple() {
+        type Codec<'a> = (&'a SizedCodec<Str>, U8);
         let buf = Codec::encode_alloc(&("hello", 9)).unwrap();
 
-        type Ignore = ComposeCodec<(SizedCodec<DecodeIgnore>, U8)>;
+        type Ignore = (SizedCodec<DecodeIgnore>, U8);
         let mut decoder = buf.into_decoding_vec();
         assert_eq!(Ignore::decode(&mut decoder).unwrap(), ((), 9));
         assert!(decoder.is_empty());

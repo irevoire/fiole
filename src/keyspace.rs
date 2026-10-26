@@ -10,8 +10,8 @@ use std::{
 };
 
 use crate::{
-    codec::{Decode, Encode, EncodingVec, Split},
     Error, Guard, Iter, KeyRange, Rtxn, Wtxn,
+    codec::{Decode, Encode, EncodingVec, Split},
 };
 
 /// Marks a [`Keyspace`] whose prefix is known to be empty: the one returned by
@@ -48,7 +48,7 @@ pub enum Prefixed {}
 /// [`Keyspace::prefixed_raw`]. They can be chained:
 ///
 /// ```
-/// # use fiole::{Database, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
+/// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
 /// #
 /// # let folder = tempfile::tempdir().unwrap();
 /// # let db = Database::builder(folder).unwrap();
@@ -56,7 +56,7 @@ pub enum Prefixed {}
 /// let users = ks.prefixed_raw(b"users\0");
 /// // The fields of each user, by the id of the user then the name of the field
 /// let kefir = users
-///     .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
+///     .remap_key_type::<(OrderedU32, Str)>()
 ///     .prefixed(&42)
 ///     .unwrap();
 ///
@@ -249,13 +249,13 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// methods taking a key panic if the prefix followed by the key is longer.
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
     /// // The items of each user, by the id of the user then their own id
     /// let items = db
-    ///     .keyspace::<ComposeCodec<(OrderedU32, OrderedU32)>, Str>("items", KeyspaceCreateOptions::default)
+    ///     .keyspace::<(OrderedU32, OrderedU32), Str>("items", KeyspaceCreateOptions::default)
     ///     .unwrap();
     ///
     /// let mut wtxn = db.write_tx().unwrap();
@@ -277,18 +277,18 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// starting with the name of the part, then specify that name:
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{Bytes, ComposeCodec, OrderedU32, Str, Terminated}};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{Bytes, OrderedU32, Str, Terminated}};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
     /// let ks = db.keyspace::<Bytes, Bytes>("default", KeyspaceCreateOptions::default).unwrap();
     /// // The names of the users by their id, and the users by their name
     /// let names = ks
-    ///     .remap_types::<ComposeCodec<(Terminated<Str>, OrderedU32)>, Str>()
+    ///     .remap_types::<(Terminated<Str>, OrderedU32), Str>()
     ///     .prefixed("names")
     ///     .unwrap();
     /// let ids = ks
-    ///     .remap_types::<ComposeCodec<(Terminated<Str>, Str)>, OrderedU32>()
+    ///     .remap_types::<(Terminated<Str>, Str), OrderedU32>()
     ///     .prefixed("ids")
     ///     .unwrap();
     ///
@@ -308,12 +308,12 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// used as another one:
     ///
     /// ```compile_fail,E0308
-    /// # use fiole::{Database, Keyspace, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
+    /// # use fiole::{Database, Keyspace, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
     /// let items = db
-    ///     .keyspace::<ComposeCodec<(OrderedU32, OrderedU32)>, Str>("items", KeyspaceCreateOptions::default)
+    ///     .keyspace::<(OrderedU32, OrderedU32), Str>("items", KeyspaceCreateOptions::default)
     ///     .unwrap();
     /// let first: Keyspace<Str, Str> = items.prefixed(&1).unwrap();
     /// ```
@@ -920,8 +920,8 @@ mod test {
 
     use super::successor;
     use crate::{
-        codec::{Bytes, ComposeCodec, Str, Terminated, U32, U8},
         Database, Keyspace, KeyspaceCreateOptions, Root,
+        codec::{Bytes, Str, Terminated, U8, U32},
     };
 
     fn setup() -> (tempfile::TempDir, Database, Keyspace<U8, Str, Root>) {
@@ -972,7 +972,7 @@ mod test {
         let chained = root.prefixed_raw(b"a").prefixed_raw(b"bc");
         assert_eq!(&*chained.prefix, b"abc");
         let chained = root
-            .remap_key_type::<ComposeCodec<(U32<BigEndian>, Terminated<Str>, U8)>>()
+            .remap_key_type::<(U32<BigEndian>, Terminated<Str>, U8)>()
             .prefixed(&1)
             .unwrap()
             .prefixed("z")
@@ -985,7 +985,7 @@ mod test {
     fn typed_and_raw_prefixes_are_the_same() {
         let (_dir, db, root) = setup();
         let typed = root
-            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .remap_key_type::<(U32<BigEndian>, U8)>()
             .prefixed(&7)
             .unwrap();
         let raw = root.prefixed_raw(7u32.to_be_bytes());
@@ -1325,7 +1325,7 @@ mod test {
         let posts = root.prefixed_raw(&b"posts\0"[..]);
         let admins = users.prefixed_raw(&b"admins\0"[..]);
         let typed = root
-            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .remap_key_type::<(U32<BigEndian>, U8)>()
             .prefixed(&7)
             .unwrap();
 
@@ -1609,7 +1609,7 @@ mod test {
             r#"Keyspace { name: "hello", prefix: b"users\x00", .. }"#
         );
         let typed = users
-            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .remap_key_type::<(U32<BigEndian>, U8)>()
             .prefixed(&0xff)
             .unwrap();
         assert_eq!(
@@ -1796,7 +1796,7 @@ mod test {
 
     #[test]
     fn prefixed_chains_down_a_key_of_three_parts() {
-        type Key = ComposeCodec<(U8, U8, U8)>;
+        type Key = (U8, U8, U8);
         let (_dir, db, root) = setup();
         let root = root.remap_key_type::<Key>();
         let mut wtxn = db.write_tx().unwrap();
@@ -1814,7 +1814,7 @@ mod test {
 
     #[test]
     fn prefixed_only_has_the_keys_of_its_head() {
-        type Key = ComposeCodec<(&'static Terminated<Str>, U8)>;
+        type Key = (&'static Terminated<Str>, U8);
         let (_dir, db, root) = setup();
         let root = root.remap_key_type::<Key>();
         let mut wtxn = db.write_tx().unwrap();

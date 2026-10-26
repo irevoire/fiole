@@ -9,7 +9,7 @@ use crate::codec::{Decode, DecodingVec};
 /// It can be used to avoid CPU-intensive decoding before making sure that it
 /// actually needs to be decoded (e.g. based on the key).
 ///
-/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a [`ComposeCodec`](crate::codec::ComposeCodec). To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
+/// /!\ This codec is final: it decodes everything till the end, so it can only be the last element of a tuple of codecs. To put it anywhere else, wrap it in a [`SizedCodec`](crate::codec::SizedCodec) or a [`Terminated`](crate::codec::Terminated).
 pub struct LazyDecode<C>(std::marker::PhantomData<C>);
 
 impl<C> Decode for LazyDecode<C> {

@@ -53,7 +53,7 @@ pub enum Dirty {}
 /// The buffer every codec writes its bytes into.
 ///
 /// The same buffer is passed from one codec to the next one, for example
-/// between the elements of a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// between the elements of a tuple of codecs.
 /// Each codec only sees its own bytes: the ones written by the previous
 /// codecs can't be read or modified.
 ///
@@ -329,7 +329,7 @@ mod test {
 
     use byteorder::BE;
 
-    use crate::codec::{ComposeCodec, Encode, EncodingVec, Fresh, U8, U32};
+    use crate::codec::{Encode, EncodingVec, Fresh, U8, U32};
 
     #[test]
     fn is_empty_borrows() {
@@ -384,7 +384,7 @@ mod test {
             }
         }
 
-        let buf = ComposeCodec::<(U8, PopCodec)>::encode_alloc(&(42, None)).unwrap();
+        let buf = <(U8, PopCodec)>::encode_alloc(&(42, None)).unwrap();
         assert_eq!(buf.finish(), vec![42]);
     }
 
@@ -407,7 +407,7 @@ mod test {
             }
         }
 
-        let buf = ComposeCodec::<(U32<BE>, ResizeCodec)>::encode_alloc(&(1, ())).unwrap();
+        let buf = <(U32<BE>, ResizeCodec)>::encode_alloc(&(1, ())).unwrap();
         assert_eq!(buf.finish(), vec![0, 0, 0, 1, 7, 7]);
     }
 

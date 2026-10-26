@@ -11,7 +11,7 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian};
 /// [`U8Pattern`] for the common ones.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Constant, Decode, DecodingVec, Encode, Pattern, U8};
+/// use fiole::codec::{Constant, Decode, DecodingVec, Encode, Pattern, U8};
 ///
 /// enum Arrow {}
 ///
@@ -19,7 +19,7 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian};
 ///     const PATTERN: &'static [u8] = b"->";
 /// }
 ///
-/// type Codec = ComposeCodec<(U8, Constant<Arrow>, U8)>;
+/// type Codec = (U8, Constant<Arrow>, U8);
 /// let bytes = Codec::encode_alloc(&(1, (), 2)).unwrap().finish();
 /// assert_eq!(bytes, b"\x01->\x02");
 /// ```
@@ -211,9 +211,9 @@ mod test {
 
     use super::*;
     use crate::codec::{
-        ComposeCodec, Constant, Decode, DecodingVec, Encode, OrderedI8, OrderedI16, OrderedI32,
-        OrderedI64, OrderedI128, OrderedU8, OrderedU16, OrderedU32, OrderedU64, OrderedU128, Str,
-        Terminated, U8, check_self_delimiting,
+        Constant, Decode, DecodingVec, Encode, OrderedI8, OrderedI16, OrderedI32, OrderedI64,
+        OrderedI128, OrderedU8, OrderedU16, OrderedU32, OrderedU64, OrderedU128, Str, Terminated,
+        U8, check_self_delimiting,
     };
 
     /// Checks the pattern of each value in both byte orders against the standard library.
@@ -393,7 +393,7 @@ mod test {
 
     #[test]
     fn int_pattern_as_a_constant() {
-        type Codec = ComposeCodec<(U8, Constant<U32Pattern<0xCAFE_BABE, BE>>, U8)>;
+        type Codec = (U8, Constant<U32Pattern<0xCAFE_BABE, BE>>, U8);
 
         let bytes = Codec::encode_alloc(&(1, (), 2)).unwrap().finish();
         assert_eq!(bytes, [1, 0xCA, 0xFE, 0xBA, 0xBE, 2]);
@@ -405,7 +405,7 @@ mod test {
 
     #[test]
     fn signed_pattern_as_a_constant() {
-        type Codec = ComposeCodec<(Constant<I16Pattern<-2, LE>>, U8)>;
+        type Codec = (Constant<I16Pattern<-2, LE>>, U8);
 
         let bytes = Codec::encode_alloc(&((), 7)).unwrap().finish();
         assert_eq!(bytes, [0xFE, 0xFF, 7]);
@@ -419,7 +419,7 @@ mod test {
 
     #[test]
     fn char_pattern_as_a_terminator() {
-        type Codec<'a> = ComposeCodec<(&'a Terminated<Str, CharPattern<'é'>>, U8)>;
+        type Codec<'a> = (&'a Terminated<Str, CharPattern<'é'>>, U8);
 
         let bytes = Codec::encode_alloc(&("caf", 1)).unwrap().finish();
         assert_eq!(bytes, b"caf\xC3\xA9\x01");

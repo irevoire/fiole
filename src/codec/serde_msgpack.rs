@@ -6,7 +6,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiti
 
 /// Encode a struct as [msgpack](https://msgpack.org/) through the [`serde::Serialize`] and [`serde::Deserialize`] traits.
 ///
-/// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+/// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
 pub struct SerdeMsgpack<T>(PhantomData<T>);
 
 impl<T> SelfDelimiting for SerdeMsgpack<T> {}

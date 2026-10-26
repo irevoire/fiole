@@ -6,9 +6,8 @@ use crate::codec::{Encode, SelfDelimiting};
 /// to type the keyspace of the keys starting with a given head: its keys are
 /// the tails, decoded with `Tail`.
 ///
-/// It's implemented on every [`ComposeCodec`](crate::codec::ComposeCodec) of
-/// two elements or more: `ComposeCodec<(A, B)>` is split as `A` then `B`, and
-/// `ComposeCodec<(A, B, C)>` as `A` then `ComposeCodec<(B, C)>`.
+/// It's implemented on every tuple of two codecs or more: `(A, B)` is split
+/// as `A` then `B`, and `(A, B, C)` as `A` then `(B, C)`.
 ///
 /// Implement it on your own codec only if it writes `(head, ...)` as `Head`
 /// writes `head`, directly followed by what `Tail` writes for the rest.

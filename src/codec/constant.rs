@@ -6,14 +6,14 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, Pattern, Sel
 ///
 /// It encodes the unit type `()` as the pattern of `P`, a single `0x00` byte with [`Nul`](crate::codec::Nul).
 /// Decoding checks the bytes start with the pattern, reads them, and fails with a [`MissingConstantError`] otherwise.
-/// It knows where it ends, so it can be used anywhere in a [`ComposeCodec`](crate::codec::ComposeCodec), and keeps the order of what follows it.
+/// It knows where it ends, so it can be used anywhere in a tuple of codecs, and keeps the order of what follows it.
 /// When used as a separator, you should prefer using `Terminated` which also make sure your inner codec doesn't
 /// contains the separator.
 ///
 /// ```
-/// use fiole::codec::{ComposeCodec, Constant, Decode, DecodingVec, Encode, Nul, U8};
+/// use fiole::codec::{Constant, Decode, DecodingVec, Encode, Nul, U8};
 ///
-/// type Codec = ComposeCodec<(U8, Constant<Nul>, U8)>;
+/// type Codec = (U8, Constant<Nul>, U8);
 ///
 /// let bytes = Codec::encode_alloc(&(1, (), 2)).unwrap().finish();
 /// assert_eq!(bytes, b"\x01\0\x02");
@@ -69,7 +69,7 @@ impl std::error::Error for MissingConstantError {}
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        ComposeCodec, Constant, Decode, DecodingVec, Encode, MissingConstantError, Nul, Pattern, U8,
+        Constant, Decode, DecodingVec, Encode, MissingConstantError, Nul, Pattern, U8,
     };
 
     enum Arrow {}
@@ -103,8 +103,8 @@ mod test {
     }
 
     #[test]
-    fn separates_a_compose() {
-        type Codec = ComposeCodec<(U8, Constant<Arrow>, U8)>;
+    fn separates_a_tuple() {
+        type Codec = (U8, Constant<Arrow>, U8);
         let bytes = Codec::encode_alloc(&(1, (), 2)).unwrap().finish();
         assert_eq!(bytes, b"\x01->\x02");
         assert_eq!(

@@ -15,7 +15,7 @@ macro_rules! define_ordered_uint {
         #[doc = concat!("It's only an alias to [`", stringify!($codec), "`]: unsigned integers stored big-endian already sort like the numbers.")]
         /// It exists so you can find all the codecs that keep the numeric order under the same name.
         ///
-        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         ///
         /// ```
         #[doc = concat!("use fiole::codec::{Decode, DecodingVec, Encode, ", stringify!($name), "};")]
@@ -44,7 +44,7 @@ macro_rules! define_ordered_int {
         /// and the encoded bytes sort like the numbers: negative numbers come
         /// before positive ones.
         ///
-        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         ///
         #[doc = concat!("The encoding isn't compatible with [`", stringify!($signed), "`]'s plain codec: switching an existing keyspace to it requires rewriting its keys.")]
         ///
@@ -106,7 +106,7 @@ macro_rules! define_ordered_float {
         /// their sign bit flipped and negative numbers get all their bits
         /// flipped, so the encoded bytes sort like the numbers.
         ///
-        /// This codec is self-delimiting: it can be followed by other codecs in a [`ComposeCodec`](crate::codec::ComposeCodec).
+        /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         ///
         #[doc = concat!("The order is the one of [`", stringify!($float), "::total_cmp`]:")]
         /// `-NaN < -∞ < … < -0.0 < 0.0 < … < ∞ < NaN`. Every value, including
