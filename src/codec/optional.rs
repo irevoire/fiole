@@ -17,13 +17,13 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// // A name, then a `\0` and a nickname if there's one
 /// type Name<'a> = ComposeCodec<(&'a Terminated<Str>, Optional<ComposeCodec<(Constant<Nul>, &'a Str)>>)>;
 ///
-/// let bytes = Name::encode_alloc(&("alice", None)).unwrap().finish();
-/// assert_eq!(bytes, b"alice\0");
+/// let bytes = Name::encode_alloc(&("kefir", None)).unwrap().finish();
+/// assert_eq!(bytes, b"kefir\0");
 /// let (name, nickname) = Name::decode(&mut DecodingVec::new(bytes)).unwrap();
-/// assert_eq!((&*name, nickname), ("alice", None));
+/// assert_eq!((&*name, nickname), ("kefir", None));
 ///
-/// let bytes = Name::encode_alloc(&("alice", Some(((), "")))).unwrap().finish();
-/// assert_eq!(bytes, b"alice\0\0");
+/// let bytes = Name::encode_alloc(&("kefir", Some(((), "")))).unwrap().finish();
+/// assert_eq!(bytes, b"kefir\0\0");
 /// let (_, nickname) = Name::decode(&mut DecodingVec::new(bytes)).unwrap();
 /// assert_eq!(nickname.map(|((), nickname)| nickname.to_string()), Some(String::new()));
 /// ```

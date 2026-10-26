@@ -80,27 +80,27 @@ let users = root.prefixed_raw(b"users\0");
 let posts = root.prefixed_raw(b"posts\0");
 // Prefixes can be chained, and specify the first part of a key made of parts:
 // here the fields of each user, by the id of the user then the name of the field
-let tamo = users
+let kefir = users
     .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
     .prefixed(&42)
     .unwrap();
 
 let mut wtxn = db.write_tx().unwrap();
-tamo.insert(&mut wtxn, "name", "Tamo").unwrap();
+kefir.insert(&mut wtxn, "name", "Kefir").unwrap();
 posts.insert(&mut wtxn, "hello", "Hello world").unwrap();
 
 // Every method only sees the keys of its own prefix
-assert_eq!(tamo.get(&wtxn, "name").unwrap().as_deref(), Some("Tamo"));
+assert_eq!(kefir.get(&wtxn, "name").unwrap().as_deref(), Some("Kefir"));
 assert_eq!(posts.iter(&wtxn).count(), 1);
 assert_eq!(users.get(&wtxn, "name").unwrap(), None);
 
 // The keys are returned without their prefix, `raw_key` gives the full key
-let guard = tamo.iter(&wtxn).next().unwrap();
+let guard = kefir.iter(&wtxn).next().unwrap();
 assert_eq!(&*guard.raw_key().unwrap(), b"users\0\0\0\0\x2aname");
 
 // Clearing a keyspace removes its keys and the ones of the keyspaces prefixed from it
 users.clear(&mut wtxn).unwrap();
-assert!(tamo.is_empty(&wtxn).unwrap());
+assert!(kefir.is_empty(&wtxn).unwrap());
 assert_eq!(posts.len(&wtxn).unwrap(), 1);
 wtxn.commit().unwrap().unwrap();
 ```

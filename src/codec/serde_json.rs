@@ -19,15 +19,15 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 ///     age: u8,
 /// }
 ///
-/// let alice = Person { name: "Alice".to_string(), age: 30 };
+/// let kefir = Person { name: "Kefir".to_string(), age: 30 };
 ///
 /// // Encode the struct as json
-/// let bytes = SerdeJson::<Person>::encode_alloc(&alice).unwrap().finish();
-/// assert_eq!(bytes, br#"{"name":"Alice","age":30}"#);
+/// let bytes = SerdeJson::<Person>::encode_alloc(&kefir).unwrap().finish();
+/// assert_eq!(bytes, br#"{"name":"Kefir","age":30}"#);
 ///
 /// // And decode it back
 /// let decoded = SerdeJson::<Person>::decode(&mut DecodingVec::new(bytes)).unwrap();
-/// assert_eq!(decoded, alice);
+/// assert_eq!(decoded, kefir);
 /// ```
 ///
 /// It can't be followed by another codec in a [`ComposeCodec`](crate::codec::ComposeCodec):

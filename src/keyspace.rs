@@ -55,16 +55,16 @@ pub enum Prefixed {}
 /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
 /// let users = ks.prefixed_raw(b"users\0");
 /// // The fields of each user, by the id of the user then the name of the field
-/// let tamo = users
+/// let kefir = users
 ///     .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
 ///     .prefixed(&42)
 ///     .unwrap();
 ///
 /// let mut wtxn = db.write_tx().unwrap();
-/// tamo.insert(&mut wtxn, "name", "Tamo").unwrap();
+/// kefir.insert(&mut wtxn, "name", "Kefir").unwrap();
 ///
-/// assert_eq!(tamo.get(&wtxn, "name").unwrap().as_deref(), Some("Tamo"));
-/// // The other keyspaces don't see the keys of `tamo` under their own prefix
+/// assert_eq!(kefir.get(&wtxn, "name").unwrap().as_deref(), Some("Kefir"));
+/// // The other keyspaces don't see the keys of `kefir` under their own prefix
 /// assert_eq!(users.get(&wtxn, "name").unwrap(), None);
 /// assert_eq!(ks.get(&wtxn, "name").unwrap(), None);
 /// ```
@@ -212,14 +212,14 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// let posts = ks.prefixed_raw(b"posts\0");
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// users.insert(&mut wtxn, "tamo", "Tamo").unwrap();
+    /// users.insert(&mut wtxn, "kefir", "Kefir").unwrap();
     /// posts.insert(&mut wtxn, "hello", "Hello world").unwrap();
     ///
     /// assert_eq!(users.len(&wtxn).unwrap(), 1);
     /// assert_eq!(posts.len(&wtxn).unwrap(), 1);
-    /// assert_eq!(posts.get(&wtxn, "tamo").unwrap(), None);
+    /// assert_eq!(posts.get(&wtxn, "kefir").unwrap(), None);
     /// // The root sees everything
-    /// assert_eq!(ks.get(&wtxn, "users\0tamo").unwrap().as_deref(), Some("Tamo"));
+    /// assert_eq!(ks.get(&wtxn, "users\0kefir").unwrap().as_deref(), Some("Kefir"));
     ///
     /// // Prefixes can be chained
     /// let admins = users.prefixed_raw(b"admins\0");
@@ -293,14 +293,14 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     ///     .unwrap();
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// names.insert(&mut wtxn, &42, "tamo").unwrap();
-    /// ids.insert(&mut wtxn, "tamo", &42).unwrap();
-    /// assert_eq!(ks.get(&wtxn, b"names\0\0\0\0\x2a").unwrap().as_deref(), Some(&b"tamo"[..]));
+    /// names.insert(&mut wtxn, &42, "kefir").unwrap();
+    /// ids.insert(&mut wtxn, "kefir", &42).unwrap();
+    /// assert_eq!(ks.get(&wtxn, b"names\0\0\0\0\x2a").unwrap().as_deref(), Some(&b"kefir"[..]));
     /// ```
     ///
     /// The head must be [`SelfDelimiting`](crate::codec::SelfDelimiting), for
     /// no head to be the start of another one: with a raw [`Str`](crate::codec::Str)
-    /// head, the keyspace of `"al"` would see the keys of `"alice"`. Wrap it
+    /// head, the keyspace of `"ke"` would see the keys of `"kefir"`. Wrap it
     /// in a [`Terminated`](crate::codec::Terminated) instead, or use
     /// [`Keyspace::prefixed_raw`] to write the bytes of the prefix yourself.
     ///
@@ -347,7 +347,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// let names = ks.prefixed_raw(b"name\0").remap_key_type::<Str>();
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// users.insert(&mut wtxn, &42, "Tamo").unwrap();
+    /// users.insert(&mut wtxn, &42, "Kefir").unwrap();
     ///
     /// for guard in ks.iter(&wtxn) {
     ///     let (key, _) = guard.into_inner().unwrap();
@@ -584,7 +584,7 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// let posts = ks.prefixed_raw(b"posts\0");
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// users.insert(&mut wtxn, "tamo", "Tamo").unwrap();
+    /// users.insert(&mut wtxn, "kefir", "Kefir").unwrap();
     /// posts.insert(&mut wtxn, "hello", "Hello world").unwrap();
     ///
     /// users.clear(&mut wtxn).unwrap();
@@ -1818,13 +1818,13 @@ mod test {
         let (_dir, db, root) = setup();
         let root = root.remap_key_type::<Key>();
         let mut wtxn = db.write_tx().unwrap();
-        for key in [("al", 1), ("alice", 2), ("bob", 3)] {
+        for key in [("ke", 1), ("kefir", 2), ("bob", 3)] {
             root.insert(&mut wtxn, &key, "value").unwrap();
         }
 
-        // "al\0" isn't the start of "alice\0": the head ends the prefix
-        assert_eq!(keys(root.prefixed(&"al").unwrap().iter(&wtxn)), [1]);
-        assert_eq!(keys(root.prefixed(&"alice").unwrap().iter(&wtxn)), [2]);
-        assert!(root.prefixed(&"a").unwrap().is_empty(&wtxn).unwrap());
+        // "ke\0" isn't the start of "kefir\0": the head ends the prefix
+        assert_eq!(keys(root.prefixed(&"ke").unwrap().iter(&wtxn)), [1]);
+        assert_eq!(keys(root.prefixed(&"kefir").unwrap().iter(&wtxn)), [2]);
+        assert!(root.prefixed(&"k").unwrap().is_empty(&wtxn).unwrap());
     }
 }

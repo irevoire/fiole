@@ -44,9 +44,9 @@
 //! // A name, a signed number, then raw bytes: only the last element can be final.
 //! type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedI32, &'a Bytes)>;
 //!
-//! let bytes = Key::encode_alloc(&("alice", -3, &[1, 2][..])).unwrap().finish();
+//! let bytes = Key::encode_alloc(&("kefir", -3, &[1, 2][..])).unwrap().finish();
 //! let (name, n, raw) = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
-//! assert_eq!((&*name, n, &*raw), ("alice", -3, &[1, 2][..]));
+//! assert_eq!((&*name, n, &*raw), ("kefir", -3, &[1, 2][..]));
 //! ```
 //!
 //! A [`ComposeCodec`] of two elements or more is [`Split`] between it's head

@@ -249,12 +249,12 @@ impl<P: Pattern> Padding for PadLeftStripped<P> {
 ///
 /// type Name = Fixed<8, Str, PadRightStripped<Nul>>;
 ///
-/// let bytes = Name::encode_alloc("tamo").unwrap().finish();
-/// assert_eq!(bytes, b"tamo\0\0\0\0");
-/// assert_eq!(&*Name::decode(&mut DecodingVec::new(bytes)).unwrap(), "tamo");
+/// let bytes = Name::encode_alloc("kefir").unwrap().finish();
+/// assert_eq!(bytes, b"kefir\0\0\0");
+/// assert_eq!(&*Name::decode(&mut DecodingVec::new(bytes)).unwrap(), "kefir");
 ///
 /// // Shorter strings sort first, like without padding
-/// assert!(Name::encode_alloc("tam").unwrap().finish() < Name::encode_alloc("tamo").unwrap().finish());
+/// assert!(Name::encode_alloc("kef").unwrap().finish() < Name::encode_alloc("kefir").unwrap().finish());
 /// ```
 pub struct PadRightStripped<P>(PhantomData<P>);
 
@@ -324,9 +324,9 @@ impl<P: Pattern> Padding for PadLeftKeep<P> {
 ///
 /// type Name = Fixed<8, Terminated<Str>, PadRightKeep<U8Pattern<b' '>>>;
 ///
-/// let bytes = Name::encode_alloc("tamo").unwrap().finish();
-/// assert_eq!(bytes, b"tamo\0   ");
-/// assert_eq!(&*Name::decode(&mut DecodingVec::new(bytes)).unwrap(), "tamo");
+/// let bytes = Name::encode_alloc("kefir").unwrap().finish();
+/// assert_eq!(bytes, b"kefir\0  ");
+/// assert_eq!(&*Name::decode(&mut DecodingVec::new(bytes)).unwrap(), "kefir");
 /// ```
 pub struct PadRightKeep<P>(PhantomData<P>);
 
@@ -524,8 +524,8 @@ mod test {
     #[test]
     fn pad_right_stripped_writes_the_padding_after() {
         assert_eq!(
-            Name::encode_alloc("tamo").unwrap().finish(),
-            b"tamo\0\0\0\0"
+            Name::encode_alloc("kefir").unwrap().finish(),
+            b"kefir\0\0\0"
         );
         assert_eq!(Name::encode_alloc("").unwrap().finish(), [0; 8]);
         assert_eq!(
@@ -533,8 +533,8 @@ mod test {
             b"12345678"
         );
         // The inner codec doesn't get the padding
-        let decoded = Name::decode(&mut DecodingVec::new(b"tamo\0\0\0\0")).unwrap();
-        assert_eq!(&*decoded, "tamo");
+        let decoded = Name::decode(&mut DecodingVec::new(b"kefir\0\0\0")).unwrap();
+        assert_eq!(&*decoded, "kefir");
         let decoded = Name::decode(&mut DecodingVec::new([0; 8])).unwrap();
         assert_eq!(&*decoded, "");
     }
@@ -564,19 +564,19 @@ mod test {
     fn pad_right_keep_gives_the_padding_to_the_inner_codec() {
         type Codec = Fixed<8, Terminated<Str>, PadRightKeep<U8Pattern<b' '>>>;
 
-        let bytes = Codec::encode_alloc("tamo").unwrap().finish();
-        assert_eq!(bytes, b"tamo\0   ");
+        let bytes = Codec::encode_alloc("kefir").unwrap().finish();
+        assert_eq!(bytes, b"kefir\0  ");
         assert_eq!(
             &*Codec::decode(&mut DecodingVec::new(bytes)).unwrap(),
-            "tamo"
+            "kefir"
         );
 
         // A final inner codec decodes the padding as part of its value
         type Final = Fixed<8, Str, PadRightKeep<U8Pattern<b' '>>>;
-        let bytes = Final::encode_alloc("tamo").unwrap().finish();
+        let bytes = Final::encode_alloc("kefir").unwrap().finish();
         assert_eq!(
             &*Final::decode(&mut DecodingVec::new(bytes)).unwrap(),
-            "tamo    "
+            "kefir   "
         );
     }
 
@@ -584,11 +584,11 @@ mod test {
     fn padding_can_be_followed_in_a_compose() {
         type Codec<'a> = ComposeCodec<(Number, &'a Name, &'a Id, U8)>;
 
-        let item = (42, "tamo", &[1, 2][..], 7);
+        let item = (42, "kefir", &[1, 2][..], 7);
         let bytes = Codec::encode_alloc(&item).unwrap().finish();
         assert_eq!(bytes.len(), 5 + 8 + 8 + 1);
         let (number, name, id, n) = Codec::decode(&mut DecodingVec::new(bytes)).unwrap();
-        assert_eq!((number, &*name, &*id, n), (42, "tamo", &[1, 2][..], 7));
+        assert_eq!((number, &*name, &*id, n), (42, "kefir", &[1, 2][..], 7));
     }
 
     #[test]
@@ -609,17 +609,17 @@ mod test {
     #[test]
     fn stripped_padding_takes_the_padding_bytes_of_the_value_with_it() {
         // The value's own `\0` at the end is stripped with the padding
-        let bytes = Name::encode_alloc("tamo\0").unwrap().finish();
-        assert_eq!(bytes, b"tamo\0\0\0\0");
+        let bytes = Name::encode_alloc("kefir\0").unwrap().finish();
+        assert_eq!(bytes, b"kefir\0\0\0");
         assert_eq!(
             &*Name::decode(&mut DecodingVec::new(bytes)).unwrap(),
-            "tamo"
+            "kefir"
         );
         // But the padding byte is kept anywhere else
-        let bytes = Name::encode_alloc("\0tamo").unwrap().finish();
+        let bytes = Name::encode_alloc("\0kefir").unwrap().finish();
         assert_eq!(
             &*Name::decode(&mut DecodingVec::new(bytes)).unwrap(),
-            "\0tamo"
+            "\0kefir"
         );
 
         let bytes = Id::encode_alloc(&[0xFF, 1]).unwrap().finish();
@@ -628,7 +628,7 @@ mod test {
 
     #[test]
     fn padding_needs_the_whole_slot_to_decode() {
-        let error = Name::decode(&mut DecodingVec::new(b"tamo\0")).unwrap_err();
+        let error = Name::decode(&mut DecodingVec::new(b"kefir")).unwrap_err();
         assert!(matches!(
             error,
             FixedDecodeError::MissingBytes {

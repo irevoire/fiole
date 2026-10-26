@@ -79,10 +79,10 @@ impl<Key, Value> Guard<Key, Value> {
     /// let users = ks.prefixed_raw(b"users\0");
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// users.insert(&mut wtxn, "tamo", "hello").unwrap();
+    /// users.insert(&mut wtxn, "kefir", "hello").unwrap();
     ///
-    /// assert_eq!(&*users.iter(&wtxn).next().unwrap().key().unwrap(), "tamo");
-    /// assert_eq!(&*users.iter(&wtxn).next().unwrap().raw_key().unwrap(), b"users\0tamo");
+    /// assert_eq!(&*users.iter(&wtxn).next().unwrap().key().unwrap(), "kefir");
+    /// assert_eq!(&*users.iter(&wtxn).next().unwrap().raw_key().unwrap(), b"users\0kefir");
     /// ```
     #[inline]
     pub fn raw_key(self) -> Result<fjall::UserKey, fjall::Error> {
