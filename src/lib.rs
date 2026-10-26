@@ -100,7 +100,8 @@ fn decode_key<Key: codec::Decode>(
         key.len() >= prefix_len,
         "the key is shorter than its prefix"
     );
-    Key::decode(&mut codec::DecodingVec::borrowed(&key[prefix_len..]))
+    let key = byteview::ByteView::from(key.clone()).slice(prefix_len..);
+    Key::decode(&mut key.into())
 }
 
 impl<Key: codec::Decode, Value> Guard<Key, Value> {
@@ -246,7 +247,7 @@ mod test {
         type Error = std::convert::Infallible;
 
         fn decode(bytes: &mut crate::codec::DecodingVec) -> Result<(), Self::Error> {
-            assert!(bytes.is_borrowed(), "the bytes were copied out of fjall");
+            assert!(!bytes.is_copied(), "the bytes were copied out of fjall");
             bytes.skip_to_end();
             Ok(())
         }

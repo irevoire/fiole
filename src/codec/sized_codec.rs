@@ -166,7 +166,7 @@ mod test {
         // With the normal codec all the bytes are put one after the other with no size in between
         let buf = Str::encode_alloc(letter).unwrap();
         let buf = Bytes::encode(buf, &number).unwrap();
-        let ret = buf.into_decoding_vec().consume();
+        let ret = buf.finish();
         assert_eq!(&ret, &[b'A', b'C', b'A', b'B', 13, 12]);
 
         // The decoder can't make the difference between the two slices of bytes
@@ -178,7 +178,7 @@ mod test {
         // With the Sized codec, the size is written as an u32.
         let buf = SizedCodec::<Str>::encode_alloc(letter).unwrap();
         let buf = SizedCodec::<Bytes>::encode(buf, &number).unwrap();
-        let ret = buf.into_decoding_vec().consume();
+        let ret = buf.finish();
         assert_eq!(
             &ret,
             &[0, 0, 0, 4, b'A', b'C', b'A', b'B', 0, 0, 0, 2, 13, 12]
@@ -197,7 +197,7 @@ mod test {
 
         let buf = SizedCodec::<Str>::encode_alloc(letter).unwrap();
         let buf = Bytes::encode(buf, &number).unwrap();
-        let ret = buf.into_decoding_vec().consume();
+        let ret = buf.finish();
         assert_eq!(&ret, &[0, 0, 0, 4, b'A', b'C', b'A', b'B', 13, 12]);
 
         // This also works and saved us 4 bytes for the size of the second slice

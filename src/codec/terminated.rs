@@ -264,7 +264,7 @@ mod test {
 
     #[test]
     fn missing_terminator() {
-        let mut decoder = DecodingVec::new(b"hello".to_vec());
+        let mut decoder = DecodingVec::new(b"hello");
         assert!(matches!(
             Terminated::<Str>::decode(&mut decoder),
             Err(TerminatedDecodeError::MissingTerminator)

@@ -86,9 +86,9 @@ where
 {
     let slice = C::encode_alloc(item).ok().unwrap().into_fjall_slice();
     // Some codecs initialize caches the first time they decode, don't count them
-    C::decode(&mut crate::codec::DecodingVec::new(slice.to_vec())).unwrap();
+    C::decode(&mut crate::codec::DecodingVec::new(&slice)).unwrap();
 
-    let mut owned = crate::codec::DecodingVec::new(slice.to_vec());
+    let mut owned = crate::codec::DecodingVec::new(&slice);
     let (decoded, owned_allocations) = allocations(|| C::decode(&mut owned).unwrap());
     assert_eq!(decoded, *item);
 

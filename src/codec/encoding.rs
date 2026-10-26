@@ -141,7 +141,7 @@ impl<T> EncodingVec<T> {
     }
 
     /// Converts the whole buffer into a [`DecodingVec`] to decode it.
-    pub fn into_decoding_vec(self) -> DecodingVec<'static> {
+    pub fn into_decoding_vec(self) -> DecodingVec {
         DecodingVec::new(self.vec)
     }
 

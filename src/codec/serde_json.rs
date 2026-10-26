@@ -35,7 +35,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// ```compile_fail,E0599
 /// use fiole::codec::{ComposeCodec, Decode, DecodingVec, SerdeJson, U8};
 ///
-/// ComposeCodec::<(SerdeJson<u32>, U8)>::decode(&mut DecodingVec::new(b"12".to_vec())).unwrap();
+/// ComposeCodec::<(SerdeJson<u32>, U8)>::decode(&mut DecodingVec::new(b"12")).unwrap();
 /// ```
 pub struct SerdeJson<T>(PhantomData<T>);
 
@@ -58,9 +58,7 @@ impl<T: DeserializeOwned> Decode for SerdeJson<T> {
     type Error = serde_json::Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        let ret = serde_json::from_slice(bytes.remaining_slice());
-        bytes.skip_to_end();
-        ret
+        serde_json::from_slice(&bytes.consume())
     }
 }
 
@@ -113,7 +111,7 @@ mod test {
     #[test]
     fn is_final() {
         // It consumes everything till the end
-        let mut decoder = DecodingVec::new(b"[1,2] ".to_vec());
+        let mut decoder = DecodingVec::new(b"[1,2] ");
         assert_eq!(
             SerdeJson::<Vec<u8>>::decode(&mut decoder).unwrap(),
             vec![1, 2]
@@ -121,9 +119,9 @@ mod test {
         assert!(decoder.is_empty());
 
         // And refuses anything that is not part of the json value
-        let mut decoder = DecodingVec::new(b"[1,2]x".to_vec());
+        let mut decoder = DecodingVec::new(b"[1,2]x");
         assert!(SerdeJson::<Vec<u8>>::decode(&mut decoder).is_err());
-        let mut decoder = DecodingVec::new(b"12x".to_vec());
+        let mut decoder = DecodingVec::new(b"12x");
         assert!(SerdeJson::<u32>::decode(&mut decoder).is_err());
     }
 

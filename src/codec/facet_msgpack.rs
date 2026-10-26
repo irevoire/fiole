@@ -28,9 +28,7 @@ impl<T: Facet<'static>> Decode for FacetMsgpack<T> {
     type Error = facet_msgpack::DeserializeError;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        let ret = facet_msgpack::from_slice(bytes.remaining_slice());
-        bytes.skip_to_end();
-        ret
+        facet_msgpack::from_slice(&bytes.consume())
     }
 }
 

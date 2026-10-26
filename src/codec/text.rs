@@ -21,7 +21,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 /// assert_eq!(decoded, home);
 ///
 /// // What doesn't parse fails with the error of `FromStr`
-/// let error = Text::<Ipv4Addr>::decode(&mut DecodingVec::borrowed(b"localhost")).unwrap_err();
+/// let error = Text::<Ipv4Addr>::decode(&mut DecodingVec::new(b"localhost")).unwrap_err();
 /// assert!(matches!(error, TextDecodeError::Parse(_)));
 /// ```
 ///
@@ -50,10 +50,9 @@ impl<T: FromStr> Decode for Text<T> {
     type Error = TextDecodeError<T::Err>;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        let text = std::str::from_utf8(bytes.remaining_slice()).map_err(TextDecodeError::Utf8)?;
-        let item = text.parse().map_err(TextDecodeError::Parse)?;
-        bytes.skip_to_end();
-        Ok(item)
+        let bytes = bytes.consume();
+        let text = std::str::from_utf8(&bytes).map_err(TextDecodeError::Utf8)?;
+        text.parse().map_err(TextDecodeError::Parse)
     }
 }
 
@@ -87,8 +86,8 @@ impl<E: std::error::Error + 'static> std::error::Error for TextDecodeError<E> {
 #[cfg(test)]
 mod test {
     use crate::codec::{
-        check_round_trip, ComposeCodec, Decode, DecodingVec, Encode, Terminated, Text,
-        TextDecodeError, U8,
+        ComposeCodec, Decode, DecodingVec, Encode, Terminated, Text, TextDecodeError, U8,
+        check_round_trip,
     };
 
     #[test]
@@ -106,18 +105,15 @@ mod test {
 
     #[test]
     fn decodes_without_copying() {
-        let mut decoder = DecodingVec::borrowed(b"42");
-        assert!(decoder.is_borrowed());
-        assert_eq!(Text::<u8>::decode(&mut decoder).unwrap(), 42);
-        assert!(decoder.is_empty());
+        crate::test_alloc::assert_decodes_without_allocating::<Text<u8>>(&42);
     }
 
     #[test]
     fn reports_why_it_did_not_decode() {
-        let error = Text::<u8>::decode(&mut DecodingVec::borrowed(b"\xFF")).unwrap_err();
+        let error = Text::<u8>::decode(&mut DecodingVec::new(b"\xFF")).unwrap_err();
         assert!(matches!(error, TextDecodeError::Utf8(_)));
 
-        let error = Text::<u8>::decode(&mut DecodingVec::borrowed(b"256")).unwrap_err();
+        let error = Text::<u8>::decode(&mut DecodingVec::new(b"256")).unwrap_err();
         assert!(matches!(error, TextDecodeError::Parse(_)));
         assert_eq!(error.to_string(), "number too large to fit in target type");
     }

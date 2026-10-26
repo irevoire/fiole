@@ -27,7 +27,7 @@ impl Decode for Bytes {
     type Error = Infallible;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        Ok(bytes.consume())
+        Ok(bytes.consume().to_vec())
     }
 }
 

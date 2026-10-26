@@ -28,9 +28,7 @@ impl<T: DeserializeOwned> Decode for SerdePostcard<T> {
     type Error = postcard::Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        let ret = postcard::from_bytes(bytes.remaining_slice());
-        bytes.skip_to_end();
-        ret
+        postcard::from_bytes(&bytes.consume())
     }
 }
 

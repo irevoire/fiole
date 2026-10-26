@@ -26,7 +26,7 @@ impl Decode for Str {
     type Error = FromUtf8Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        String::from_utf8(bytes.consume())
+        String::from_utf8(bytes.consume().to_vec())
     }
 }
 

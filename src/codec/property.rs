@@ -246,7 +246,7 @@ where
         );
     } else {
         assert!(
-            remaining == suffix,
+            *remaining == *suffix,
             "Decoding {item:?} didn't stop at the end of its own bytes.\nencoded: {encoded:?}\nsuffix: {suffix:?}\nleft to read: {remaining:?}",
         );
     }

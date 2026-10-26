@@ -29,9 +29,7 @@ impl<T: Facet<'static>> Decode for FacetJson<T> {
     type Error = DeserializeError;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        let ret = facet_json::from_slice(bytes.remaining_slice());
-        bytes.skip_to_end();
-        ret
+        facet_json::from_slice(&bytes.consume())
     }
 }
 

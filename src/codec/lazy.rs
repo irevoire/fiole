@@ -15,7 +15,7 @@ impl<C> Decode for LazyDecode<C> {
     type Error = Infallible;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        Ok(Lazy(bytes.consume(), PhantomData))
+        Ok(Lazy(bytes.consume().to_vec(), PhantomData))
     }
 }
 
@@ -79,7 +79,7 @@ mod test {
     fn decode_doesnt_require_a_static_codec() {
         // `&'a Str` isn't `'static`
         fn decode<'a>(bytes: &'a [u8]) -> String {
-            let mut bytes = DecodingVec::new(bytes.to_vec());
+            let mut bytes = DecodingVec::new(bytes);
             let lazy = LazyDecode::<&'a Str>::decode(&mut bytes).unwrap();
             lazy.decode().unwrap()
         }

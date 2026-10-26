@@ -1,8 +1,6 @@
-use std::{
-    borrow::Cow,
-    io::{Cursor, Read},
-};
+use std::io::Read;
 
+use byteview::ByteView;
 use fjall::Slice;
 
 /// Define how to decode an object from the bytes stored in fjall to your type.
@@ -28,58 +26,69 @@ where
     }
 }
 
-pub struct DecodingVec<'a> {
-    cursor: Cursor<Cow<'a, [u8]>>,
+/// The bytes a codec decodes, with a cursor to know what has already been read.
+///
+/// It shares the buffer of the [`Slice`] or [`ByteView`] it's built from, so
+/// building it, [`DecodingVec::take_next`] and [`DecodingVec::consume`] never copy the bytes.
+pub struct DecodingVec {
+    bytes: ByteView,
+    position: usize,
+    /// Whether the bytes were copied when building the `DecodingVec`.
+    #[cfg(test)]
+    copied: bool,
 }
 
-impl From<Slice> for DecodingVec<'static> {
+impl From<ByteView> for DecodingVec {
+    fn from(bytes: ByteView) -> Self {
+        Self {
+            bytes,
+            position: 0,
+            #[cfg(test)]
+            copied: false,
+        }
+    }
+}
+
+impl From<Slice> for DecodingVec {
     fn from(value: Slice) -> Self {
-        Self::new(value.to_vec())
+        ByteView::from(value).into()
     }
 }
 
-impl<'a> From<&'a Slice> for DecodingVec<'a> {
-    fn from(value: &'a Slice) -> Self {
-        Self {
-            cursor: Cursor::new(Cow::Borrowed(value)),
-        }
+impl From<&Slice> for DecodingVec {
+    fn from(value: &Slice) -> Self {
+        value.clone().into()
     }
 }
 
-impl<'a> DecodingVec<'a> {
-    pub fn new(vec: Vec<u8>) -> Self {
-        Self {
-            cursor: Cursor::new(vec.into()),
-        }
-    }
-
-    /// Reads `bytes` without copying them.
+impl DecodingVec {
+    /// Copies `bytes` to decode them. Build it from a [`Slice`] or a
+    /// [`ByteView`] instead to share their buffer.
     ///
     /// ```
     /// use fiole::codec::{Decode, DecodingVec, Str};
     ///
-    /// let bytes = b"hello";
-    /// let decoded = Str::decode(&mut DecodingVec::borrowed(bytes)).unwrap();
+    /// let decoded = Str::decode(&mut DecodingVec::new(b"hello")).unwrap();
     /// assert_eq!(decoded, "hello");
     /// ```
-    pub fn borrowed(bytes: &'a [u8]) -> Self {
+    pub fn new(bytes: impl AsRef<[u8]>) -> Self {
         Self {
-            cursor: Cursor::new(Cow::Borrowed(bytes)),
+            #[cfg(test)]
+            copied: true,
+            ..ByteView::new(bytes.as_ref()).into()
         }
     }
 
     /// Equivalent to [`std::io::Read::take`] except it return a `DecodingVec` which can be used within another codec.
-    pub fn take_next<'b>(&'b mut self, size: usize) -> DecodingVec<'b> {
-        let current_pos = self.cursor.position() as usize;
-        let inner = self.cursor.get_ref();
-        let take_until = inner.len().min(current_pos.saturating_add(size));
-        self.cursor.set_position(take_until as u64);
-
-        // Rust don't understand we're not touching the inner vec so we have to take the ref again.
-        let inner = self.cursor.get_ref();
-        let data = &inner[current_pos..take_until];
+    pub fn take_next(&mut self, size: usize) -> DecodingVec {
+        let start = self.position.min(self.bytes.len());
+        let end = self.bytes.len().min(start.saturating_add(size));
+        self.position = end;
         DecodingVec {
-            cursor: Cursor::new(Cow::Borrowed(data)),
+            bytes: self.bytes.slice(start..end),
+            position: 0,
+            #[cfg(test)]
+            copied: self.copied,
         }
     }
 
@@ -89,54 +98,71 @@ impl<'a> DecodingVec<'a> {
 
     /// Moves the cursor to the end without reading anything.
     pub fn skip_to_end(&mut self) {
-        let len = self.cursor.get_ref().len();
-        self.cursor.set_position(len as u64);
+        self.position = self.bytes.len();
     }
 
     /// The bytes left to read, without moving the cursor.
     pub fn remaining_slice(&self) -> &[u8] {
-        let inner = self.cursor.get_ref();
-        let pos = (self.cursor.position() as usize).min(inner.len());
-        &inner[pos..]
+        &self.bytes[self.position.min(self.bytes.len())..]
+    }
+
+    /// Reads everything till the end.
+    ///
+    /// ```
+    /// use std::io::Read;
+    /// use fiole::codec::DecodingVec;
+    ///
+    /// let mut bytes = DecodingVec::new(b"\x01hello");
+    /// bytes.read_exact(&mut [0]).unwrap();
+    /// assert_eq!(&*bytes.consume(), b"hello");
+    /// assert!(bytes.is_empty());
+    /// ```
+    pub fn consume(&mut self) -> ByteView {
+        self.take_next(usize::MAX).bytes
     }
 
     /// Number of bytes left to read.
     pub fn remaining(&self) -> usize {
-        self.cursor
-            .get_ref()
-            .len()
-            .saturating_sub(self.cursor.position() as usize)
-    }
-
-    /// Useful when your codec is going to consume everything till the end
-    /// and needs to own the bytes.
-    ///
-    /// When the bytes are borrowed (e.g. straight from fjall), this copies
-    /// them. If your codec only needs to read them, use [`DecodingVec::remaining_slice`]
-    /// followed by [`DecodingVec::skip_to_end`] instead.
-    pub fn consume(&mut self) -> Vec<u8> {
-        let cursor = std::mem::take(&mut self.cursor);
-        let pos = cursor.position() as usize;
-        match cursor.into_inner() {
-            Cow::Borrowed(slice) => slice[pos..].to_vec(),
-            Cow::Owned(mut vec) => {
-                vec.drain(..pos);
-                vec
-            }
-        }
+        self.bytes.len().saturating_sub(self.position)
     }
 }
 
 #[cfg(test)]
-impl DecodingVec<'_> {
-    /// Whether the bytes are borrowed rather than copied.
-    pub(crate) fn is_borrowed(&self) -> bool {
-        matches!(self.cursor.get_ref(), Cow::Borrowed(_))
+impl DecodingVec {
+    /// Whether the bytes were copied when building the `DecodingVec`,
+    /// rather than shared with the buffer they come from.
+    pub(crate) fn is_copied(&self) -> bool {
+        self.copied
     }
 }
 
-impl Read for DecodingVec<'_> {
+impl Read for DecodingVec {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cursor.read(buf)
+        let mut remaining = self.remaining_slice();
+        let read = remaining.read(buf)?;
+        self.position += read;
+        Ok(read)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use fjall::Slice;
+
+    use super::DecodingVec;
+
+    #[test]
+    fn consume_shares_the_bytes() {
+        // Longer than the 20 bytes stored inline, so the bytes live on the heap
+        let slice = Slice::from("a value long enough to not be stored inline");
+        let (consumed, allocations) = crate::test_alloc::allocations(|| {
+            let mut decoder = DecodingVec::from(&slice);
+            decoder.take_next(2);
+            let consumed = decoder.consume();
+            assert!(decoder.is_empty());
+            consumed
+        });
+        assert_eq!(&*consumed, b"value long enough to not be stored inline");
+        assert_eq!(allocations, 0);
     }
 }
