@@ -69,7 +69,7 @@ impl DecodingVec {
     /// use fiole::codec::{Decode, DecodingVec, Str};
     ///
     /// let decoded = Str::decode(&mut DecodingVec::new(b"hello")).unwrap();
-    /// assert_eq!(decoded, "hello");
+    /// assert_eq!(&*decoded, "hello");
     /// ```
     pub fn new(bytes: impl AsRef<[u8]>) -> Self {
         Self {

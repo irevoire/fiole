@@ -81,7 +81,7 @@ impl<Key, Value> Guard<Key, Value> {
     /// let mut wtxn = db.write_tx().unwrap();
     /// users.insert(&mut wtxn, "tamo", "hello").unwrap();
     ///
-    /// assert_eq!(users.iter(&wtxn).next().unwrap().key().unwrap(), "tamo");
+    /// assert_eq!(&*users.iter(&wtxn).next().unwrap().key().unwrap(), "tamo");
     /// assert_eq!(&*users.iter(&wtxn).next().unwrap().raw_key().unwrap(), b"users\0tamo");
     /// ```
     #[inline]

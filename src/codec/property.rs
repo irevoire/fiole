@@ -27,6 +27,7 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, SelfDelimiting};
 ///
 /// `O` is the owned type that gets generated, it must [`Borrow`] the item
 /// encoded by `C`. For example, use [`String`] for a codec encoding [`str`].
+/// The item decoded by `C` must also [`Borrow`] it, to be compared with the original.
 /// When `O` doesn't implement [`Arbitrary`], use [`check_round_trip_with`].
 ///
 /// # Panics
@@ -47,8 +48,8 @@ pub fn check_round_trip<C, O>(u: &mut Unstructured) -> arbitrary::Result<()>
 where
     C: Encode + Decode,
     O: for<'a> Arbitrary<'a> + Borrow<<C as Encode>::Item>,
-    <C as Encode>::Item: Debug,
-    <C as Decode>::Item: PartialEq<<C as Encode>::Item> + Debug,
+    <C as Encode>::Item: PartialEq + Debug,
+    <C as Decode>::Item: Borrow<<C as Encode>::Item> + Debug,
     <C as Decode>::Error: Debug,
 {
     check_round_trip_with::<C, O>(u, O::arbitrary)
@@ -64,8 +65,8 @@ pub fn check_round_trip_with<'a, C, O>(
 where
     C: Encode + Decode,
     O: Borrow<<C as Encode>::Item>,
-    <C as Encode>::Item: Debug,
-    <C as Decode>::Item: PartialEq<<C as Encode>::Item> + Debug,
+    <C as Encode>::Item: PartialEq + Debug,
+    <C as Decode>::Item: Borrow<<C as Encode>::Item> + Debug,
     <C as Decode>::Error: Debug,
 {
     let prefix: Vec<u8> = u.arbitrary()?;
@@ -90,6 +91,7 @@ where
 ///
 /// `O` is the owned type that gets generated, it must [`Borrow`] the item
 /// encoded by `C`. For example, use [`String`] for a codec encoding [`str`].
+/// The item decoded by `C` must also [`Borrow`] it, to be compared with the original.
 /// When `O` doesn't implement [`Arbitrary`], use [`check_self_delimiting_with`].
 ///
 /// # Panics
@@ -111,8 +113,8 @@ pub fn check_self_delimiting<C, O>(u: &mut Unstructured) -> arbitrary::Result<()
 where
     C: Encode + Decode + SelfDelimiting,
     O: for<'a> Arbitrary<'a> + Borrow<<C as Encode>::Item>,
-    <C as Encode>::Item: Debug,
-    <C as Decode>::Item: PartialEq<<C as Encode>::Item> + Debug,
+    <C as Encode>::Item: PartialEq + Debug,
+    <C as Decode>::Item: Borrow<<C as Encode>::Item> + Debug,
     <C as Decode>::Error: Debug,
 {
     check_self_delimiting_with::<C, O>(u, O::arbitrary)
@@ -128,8 +130,8 @@ pub fn check_self_delimiting_with<'a, C, O>(
 where
     C: Encode + Decode + SelfDelimiting,
     O: Borrow<<C as Encode>::Item>,
-    <C as Encode>::Item: Debug,
-    <C as Decode>::Item: PartialEq<<C as Encode>::Item> + Debug,
+    <C as Encode>::Item: PartialEq + Debug,
+    <C as Decode>::Item: Borrow<<C as Encode>::Item> + Debug,
     <C as Decode>::Error: Debug,
 {
     let prefix: Vec<u8> = u.arbitrary()?;
@@ -212,8 +214,8 @@ where
 fn check<C>(prefix: &[u8], item: &<C as Encode>::Item, suffix: &[u8])
 where
     C: Encode + Decode,
-    <C as Encode>::Item: Debug,
-    <C as Decode>::Item: PartialEq<<C as Encode>::Item> + Debug,
+    <C as Encode>::Item: PartialEq + Debug,
+    <C as Decode>::Item: Borrow<<C as Encode>::Item> + Debug,
     <C as Decode>::Error: Debug,
 {
     let mut vec = EncodingVec::new().edit();
@@ -235,7 +237,7 @@ where
         panic!("Couldn't decode {item:?}: {error:?}\nencoded: {encoded:?}\nsuffix: {suffix:?}")
     });
     assert!(
-        decoded == *item,
+        decoded.borrow() == item,
         "Decoded {decoded:?} instead of {item:?}\nencoded: {encoded:?}\nsuffix: {suffix:?}",
     );
     let remaining = decoder.consume();

@@ -1,4 +1,6 @@
-use std::{convert::Infallible, string::FromUtf8Error};
+use std::{convert::Infallible, str::Utf8Error};
+
+use byteview::StrView;
 
 use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh};
 
@@ -22,20 +24,27 @@ impl Encode for Str {
 }
 
 impl Decode for Str {
-    type Item = String;
-    type Error = FromUtf8Error;
+    type Item = StrView;
+    type Error = Utf8Error;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        String::from_utf8(bytes.consume().to_vec())
+        StrView::try_from(bytes.consume())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::codec::{Str, check_round_trip};
+    use crate::codec::{check_round_trip, Str};
 
     #[test]
     fn round_trip() {
         arbtest::arbtest(check_round_trip::<Str, String>);
+    }
+
+    #[test]
+    fn decodes_without_copying() {
+        crate::test_alloc::assert_decodes_without_allocating::<Str>(
+            "a string longer than 20 bytes",
+        );
     }
 }

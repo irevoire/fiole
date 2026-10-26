@@ -138,9 +138,9 @@ impl AsRef<Rtxn> for Wtxn {
 /// A read transaction.
 ///
 /// ```
-/// use fiole::{Database, Keyspace, KeyspaceCreateOptions, Rtxn, codec::Str};
+/// use fiole::{Database, Keyspace, KeyspaceCreateOptions, Rtxn, byteview::StrView, codec::Str};
 ///
-/// fn greeting(ks: &Keyspace<Str, Str>, rtxn: &Rtxn) -> Option<String> {
+/// fn greeting(ks: &Keyspace<Str, Str>, rtxn: &Rtxn) -> Option<StrView> {
 ///     ks.get(rtxn, "hello").unwrap()
 /// }
 ///

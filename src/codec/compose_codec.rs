@@ -16,8 +16,8 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiti
 ///
 /// type Codec<'a> = ComposeCodec<(&'a SizedCodec<Str>, U8, &'a Str)>;
 /// let buf = Codec::encode_alloc(&("hello", 1, "world")).unwrap();
-/// let decoded = Codec::decode(&mut buf.into_decoding_vec()).unwrap();
-/// assert_eq!(decoded, ("hello".to_string(), 1, "world".to_string()));
+/// let (hello, n, world) = Codec::decode(&mut buf.into_decoding_vec()).unwrap();
+/// assert_eq!((&*hello, n, &*world), ("hello", 1, "world"));
 ///
 /// // A compose made only of self-delimiting codecs can itself be followed by another codec
 /// type Nested = ComposeCodec<(ComposeCodec<(U8, U8)>, U8)>;
@@ -229,13 +229,13 @@ mod test {
 
         let buf = MyCodec::encode_alloc(&(letter, &number)).unwrap();
         let decode = MyCodec::decode(&mut buf.into_decoding_vec()).unwrap();
-        assert_eq!((letter.to_string(), number.to_vec()), (decode.0, decode.1));
+        assert_eq!((letter, &number[..]), (&*decode.0, &*decode.1));
 
         type MyCodec2<'a> = ComposeCodec<(&'a SizedCodec<Bytes>, &'a Str)>;
 
         let buf = MyCodec2::encode_alloc(&(&number, letter)).unwrap();
         let decode = MyCodec2::decode(&mut buf.into_decoding_vec()).unwrap();
-        assert_eq!((number.to_vec(), letter.to_string()), (decode.0, decode.1));
+        assert_eq!((&number[..], letter), (&*decode.0, &*decode.1));
     }
 
     #[test]
@@ -266,7 +266,10 @@ mod test {
             fn decode(bytes: &mut crate::codec::DecodingVec) -> Result<Self::Item, Self::Error> {
                 let (s, n) = ComposeCodec::<(SizedCodec<Str>, Bytes)>::decode(bytes)
                     .map_err(|err| Box::new(err) as Box<dyn Error>)?;
-                Ok(Self { s, n })
+                Ok(Self {
+                    s: s.to_string(),
+                    n: n.to_vec(),
+                })
             }
         }
 
@@ -308,8 +311,8 @@ mod test {
                 let (s, n) = ComposeCodec::<(SizedCodec<Str>, Bytes)>::decode(bytes)
                     .map_err(|err| Box::new(err) as Box<dyn Error>)?;
                 Ok(Self {
-                    s: Cow::Owned(s),
-                    n: Cow::Owned(n),
+                    s: Cow::Owned(s.to_string()),
+                    n: Cow::Owned(n.to_vec()),
                 })
             }
         }

@@ -51,8 +51,8 @@ impl Terminator for Nul {
 ///
 /// let bytes = Key::encode_alloc(&("hello", 42)).unwrap().finish();
 /// assert_eq!(bytes, b"hello\0\0\0\0\x2a");
-/// let decoded = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
-/// assert_eq!(decoded, ("hello".to_string(), 42));
+/// let (s, n) = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
+/// assert_eq!((&*s, n), ("hello", 42));
 ///
 /// // The order of the strings is kept, whatever follows them
 /// let a = Key::encode_alloc(&("a", u32::MAX)).unwrap().finish();
@@ -80,7 +80,7 @@ impl Terminator for Nul {
 ///
 /// let bytes = Codec::encode_alloc(&[0, 1, 0xFF]).unwrap().finish();
 /// assert_eq!(bytes, [0, 1, 0xFF, 0xFF, 0xFE]);
-/// assert_eq!(Codec::decode(&mut DecodingVec::new(bytes)).unwrap(), [0, 1, 0xFF]);
+/// assert_eq!(&*Codec::decode(&mut DecodingVec::new(bytes)).unwrap(), [0, 1, 0xFF]);
 ///
 /// // The pattern can't appear anywhere before the end, even partially overlapping the terminator
 /// assert!(Codec::encode_alloc(&[1, 0xFF, 0xFE, 2]).is_err());
@@ -331,10 +331,10 @@ mod test {
 
         let rtxn = database.read_tx();
         let keys: Vec<_> = ks.iter(&rtxn).map(|guard| guard.key().unwrap()).collect();
-        let keys: Vec<_> = keys.iter().map(|(s, n)| (s.as_str(), *n)).collect();
+        let keys: Vec<_> = keys.iter().map(|(s, n)| (&**s, *n)).collect();
         assert_eq!(keys, [("a", 5), ("aa", 0), ("ab", 1), ("b", 0)]);
 
         let first = ks.first_key_value(&rtxn).unwrap().key().unwrap();
-        assert_eq!(first, ("a".to_string(), 5));
+        assert_eq!((&*first.0, first.1), ("a", 5));
     }
 }

@@ -22,8 +22,8 @@ use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiti
 ///
 /// let bytes = Codec::encode_alloc(&("hi", 7)).unwrap().finish();
 /// assert_eq!(bytes, [0, 0, 0, 2, b'h', b'i', 7]);
-/// let decoded = Codec::decode(&mut DecodingVec::new(bytes)).unwrap();
-/// assert_eq!(decoded, ("hi".to_string(), 7));
+/// let (s, n) = Codec::decode(&mut DecodingVec::new(bytes)).unwrap();
+/// assert_eq!((&*s, n), ("hi", 7));
 /// ```
 ///
 /// It's ideal for values and for keys whose order doesn't matter.
@@ -171,7 +171,7 @@ mod test {
 
         // The decoder can't make the difference between the two slices of bytes
         let decode = Bytes::decode(&mut DecodingVec::new(ret)).unwrap();
-        assert_eq!(&decode, &[b'A', b'C', b'A', b'B', 13, 12]);
+        assert_eq!(&*decode, &[b'A', b'C', b'A', b'B', 13, 12]);
 
         // === With the sized codec used everywhere
 
@@ -188,8 +188,8 @@ mod test {
         let mut decoder = DecodingVec::new(ret);
         let decode_letter = SizedCodec::<Str>::decode(&mut decoder).unwrap();
         let decode_bytes = SizedCodec::<Bytes>::decode(&mut decoder).unwrap();
-        assert_eq!(&decode_letter, "ACAB");
-        assert_eq!(&decode_bytes, &[13, 12]);
+        assert_eq!(&*decode_letter, "ACAB");
+        assert_eq!(&*decode_bytes, &[13, 12]);
         assert!(decoder.is_empty());
         assert!(decoder.consume().is_empty());
 
@@ -204,8 +204,8 @@ mod test {
         let mut decoder = DecodingVec::new(ret);
         let decode_letter = SizedCodec::<Str>::decode(&mut decoder).unwrap();
         let decode_bytes = Bytes::decode(&mut decoder).unwrap();
-        assert_eq!(&decode_letter, "ACAB");
-        assert_eq!(&decode_bytes, &[13, 12]);
+        assert_eq!(&*decode_letter, "ACAB");
+        assert_eq!(&*decode_bytes, &[13, 12]);
         assert!(decoder.is_empty());
         assert!(decoder.consume().is_empty());
     }
@@ -234,12 +234,12 @@ mod test {
 
         // When the size matches exactly it must still work
         let mut decoder = DecodingVec::new(vec![0, 0, 0, 2, b'h', b'i']);
-        assert_eq!(SizedCodec::<Str>::decode(&mut decoder).unwrap(), "hi");
+        assert_eq!(&*SizedCodec::<Str>::decode(&mut decoder).unwrap(), "hi");
         assert!(decoder.is_empty());
 
         // Even if there is no data afterward
         let mut decoder = DecodingVec::new(vec![0, 0, 0, 0]);
-        assert_eq!(SizedCodec::<Str>::decode(&mut decoder).unwrap(), "");
+        assert_eq!(&*SizedCodec::<Str>::decode(&mut decoder).unwrap(), "");
         assert!(decoder.is_empty());
     }
 

@@ -952,9 +952,12 @@ mod test {
         let bytes = a.remap_types::<Bytes, Bytes>();
         assert_eq!(bytes.get(&wtxn, &[1]).unwrap().as_deref(), Some(&b"a1"[..]));
         let guard = a.iter(&wtxn).next().unwrap();
-        assert_eq!(guard.remap_key_type::<Bytes>().key().unwrap(), [1]);
+        assert_eq!(&*guard.remap_key_type::<Bytes>().key().unwrap(), [1]);
         let iter = a.iter(&wtxn).remap_key_type::<Bytes>();
-        assert_eq!(iter.map(|g| g.key().unwrap()).collect::<Vec<_>>(), [[1]]);
+        assert_eq!(
+            iter.map(|g| g.key().unwrap().to_vec()).collect::<Vec<_>>(),
+            [[1]]
+        );
     }
 
     #[test]
@@ -1099,7 +1102,10 @@ mod test {
             let rtxn = db.read_tx();
             assert_eq!(keys(ks.iter(&rtxn)), [1, 2, 3]);
             assert_eq!(keys(ks.iter(&rtxn).rev()), [3, 2, 1]);
-            let values: Vec<String> = ks.iter(&rtxn).map(|g| g.value().unwrap()).collect();
+            let values: Vec<String> = ks
+                .iter(&rtxn)
+                .map(|g| g.value().unwrap().to_string())
+                .collect();
             assert_eq!(values, ["one", "two", "three"]);
         });
     }
@@ -1126,9 +1132,9 @@ mod test {
             insert_123(db, ks);
             let rtxn = db.read_tx();
             let first = ks.first_key_value(&rtxn).unwrap().into_inner().unwrap();
-            assert_eq!(first, (1, "one".to_string()));
+            assert_eq!((first.0, &*first.1), (1, "one"));
             let last = ks.last_key_value(&rtxn).unwrap().into_inner().unwrap();
-            assert_eq!(last, (3, "three".to_string()));
+            assert_eq!((last.0, &*last.1), (3, "three"));
         });
     }
 
@@ -1170,7 +1176,7 @@ mod test {
             let rtxn = db.read_tx();
             let scan = |p: &[u8]| -> Vec<Vec<u8>> {
                 let iter = ks.prefix(&rtxn, p).unwrap();
-                iter.map(|g| g.key().unwrap()).collect()
+                iter.map(|g| g.key().unwrap().to_vec()).collect()
             };
             assert_eq!(scan(&[2]), [&[2][..], &[2, 1], &[2, 2]], "{prefix:?}");
             assert_eq!(scan(&[2, 1]), [[2, 1]]);
@@ -1234,7 +1240,10 @@ mod test {
         let all: Vec<(Vec<u8>, String)> = root
             .remap_key_type::<Bytes>()
             .iter(&rtxn)
-            .map(|guard| guard.into_inner().unwrap())
+            .map(|guard| {
+                let (key, value) = guard.into_inner().unwrap();
+                (key.to_vec(), value.to_string())
+            })
             .collect();
         let expected_owned: Vec<(Vec<u8>, String)> = expected
             .iter()
@@ -1593,7 +1602,7 @@ mod test {
         }
 
         let range = |iter: crate::Iter<Str, U8>| -> Vec<String> {
-            iter.map(|guard| guard.key().unwrap()).collect()
+            iter.map(|guard| guard.key().unwrap().to_string()).collect()
         };
         assert_eq!(range(ks.range(&wtxn, &("b"..)).unwrap()), ["b", "c", "d"]);
         assert_eq!(range(ks.range(&wtxn, &(.."c")).unwrap()), ["a", "b"]);
@@ -1613,7 +1622,7 @@ mod test {
         let keys: Vec<Vec<u8>> = bytes
             .range(&wtxn, &(&b"b"[..]..&b"d"[..]))
             .unwrap()
-            .map(|guard| guard.key().unwrap())
+            .map(|guard| guard.key().unwrap().to_vec())
             .collect();
         assert_eq!(keys, [b"b", b"c"]);
     }

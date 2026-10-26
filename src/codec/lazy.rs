@@ -1,5 +1,7 @@
 use std::{convert::Infallible, fmt, marker::PhantomData};
 
+use byteview::ByteView;
+
 use crate::codec::{Decode, DecodingVec};
 
 /// Lazily decodes the data bytes.
@@ -15,13 +17,13 @@ impl<C> Decode for LazyDecode<C> {
     type Error = Infallible;
 
     fn decode(bytes: &mut DecodingVec) -> Result<Self::Item, Self::Error> {
-        Ok(Lazy(bytes.consume().to_vec(), PhantomData))
+        Ok(Lazy(bytes.consume(), PhantomData))
     }
 }
 
 /// Owns bytes that can be decoded on demand.
 #[repr(transparent)]
-pub struct Lazy<C>(Vec<u8>, PhantomData<C>);
+pub struct Lazy<C>(ByteView, PhantomData<C>);
 
 impl<C> fmt::Debug for Lazy<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -45,7 +47,7 @@ impl<C> Lazy<C> {
 impl<C: Decode> Lazy<C> {
     /// Decode the given bytes according to the codec.
     pub fn decode(self) -> Result<C::Item, C::Error> {
-        C::decode(&mut DecodingVec::new(self.0))
+        C::decode(&mut DecodingVec::from(self.0))
     }
 }
 
@@ -69,6 +71,19 @@ mod test {
     }
 
     #[test]
+    fn decodes_without_copying() {
+        let slice = Str::encode_alloc("a string longer than 20 bytes")
+            .unwrap()
+            .into_fjall_slice();
+        let (decoded, allocations) = crate::test_alloc::allocations(|| {
+            let lazy = LazyDecode::<Str>::decode(&mut DecodingVec::from(&slice)).unwrap();
+            lazy.clone().decode().unwrap()
+        });
+        assert_eq!(&*decoded, "a string longer than 20 bytes");
+        assert_eq!(allocations, 0);
+    }
+
+    #[test]
     fn debug_doesnt_require_a_debug_codec() {
         let lazy = LazyDecode::<NotDebug>::decode(&mut DecodingVec::new(vec![1, 2])).unwrap();
         assert_eq!(format!("{lazy:?}"), "Lazy([1, 2])");
@@ -81,7 +96,7 @@ mod test {
         fn decode<'a>(bytes: &'a [u8]) -> String {
             let mut bytes = DecodingVec::new(bytes);
             let lazy = LazyDecode::<&'a Str>::decode(&mut bytes).unwrap();
-            lazy.decode().unwrap()
+            lazy.decode().unwrap().to_string()
         }
 
         let bytes = Str::encode_alloc("hello").unwrap().finish();

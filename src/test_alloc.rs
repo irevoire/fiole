@@ -3,6 +3,7 @@
 
 use std::{
     alloc::{GlobalAlloc, Layout, System},
+    borrow::Borrow,
     cell::Cell,
 };
 
@@ -54,15 +55,14 @@ pub fn allocations<R>(f: impl FnOnce() -> R) -> (R, usize) {
 pub fn assert_decodes_without_allocating<C>(item: &<C as crate::codec::Encode>::Item)
 where
     C: crate::codec::Encode + crate::codec::Decode,
-    <C as crate::codec::Encode>::Item: std::fmt::Debug,
-    <C as crate::codec::Decode>::Item:
-        PartialEq<<C as crate::codec::Encode>::Item> + std::fmt::Debug,
+    <C as crate::codec::Encode>::Item: PartialEq + std::fmt::Debug,
+    <C as crate::codec::Decode>::Item: Borrow<<C as crate::codec::Encode>::Item> + std::fmt::Debug,
     <C as crate::codec::Decode>::Error: std::fmt::Debug,
 {
     let slice = C::encode_alloc(item).ok().unwrap().into_fjall_slice();
     let mut decoder = crate::codec::DecodingVec::from(&slice);
     let (decoded, allocations) = allocations(|| C::decode(&mut decoder).unwrap());
-    assert_eq!(decoded, *item);
+    assert_eq!(decoded.borrow(), item);
     assert!(decoder.is_empty(), "{item:?} wasn't fully read");
     assert_eq!(allocations, 0, "decoding {item:?} allocated");
 }
@@ -79,9 +79,8 @@ where
 pub fn assert_decodes_without_copying<C>(item: &<C as crate::codec::Encode>::Item)
 where
     C: crate::codec::Encode + crate::codec::Decode,
-    <C as crate::codec::Encode>::Item: std::fmt::Debug,
-    <C as crate::codec::Decode>::Item:
-        PartialEq<<C as crate::codec::Encode>::Item> + std::fmt::Debug,
+    <C as crate::codec::Encode>::Item: PartialEq + std::fmt::Debug,
+    <C as crate::codec::Decode>::Item: Borrow<<C as crate::codec::Encode>::Item> + std::fmt::Debug,
     <C as crate::codec::Decode>::Error: std::fmt::Debug,
 {
     let slice = C::encode_alloc(item).ok().unwrap().into_fjall_slice();
@@ -90,11 +89,11 @@ where
 
     let mut owned = crate::codec::DecodingVec::new(&slice);
     let (decoded, owned_allocations) = allocations(|| C::decode(&mut owned).unwrap());
-    assert_eq!(decoded, *item);
+    assert_eq!(decoded.borrow(), item);
 
     let mut borrowed = crate::codec::DecodingVec::from(&slice);
     let (decoded, borrowed_allocations) = allocations(|| C::decode(&mut borrowed).unwrap());
-    assert_eq!(decoded, *item);
+    assert_eq!(decoded.borrow(), item);
     assert!(borrowed.is_empty(), "{item:?} wasn't fully read");
     assert_eq!(
         borrowed_allocations, owned_allocations,

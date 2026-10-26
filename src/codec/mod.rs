@@ -41,8 +41,8 @@
 //! type Key<'a> = ComposeCodec<(&'a Terminated<Str>, OrderedI32, &'a Bytes)>;
 //!
 //! let bytes = Key::encode_alloc(&("alice", -3, &[1, 2][..])).unwrap().finish();
-//! let decoded = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
-//! assert_eq!(decoded, ("alice".to_string(), -3, vec![1, 2]));
+//! let (name, n, raw) = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
+//! assert_eq!((&*name, n, &*raw), ("alice", -3, &[1, 2][..]));
 //! ```
 
 use std::convert::Infallible;
