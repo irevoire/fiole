@@ -19,7 +19,7 @@
 //! bytes end:
 //!
 //! - *Self-delimiting* codecs know where they end and implement [`SelfDelimiting`]:
-//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], [`Constant`], a
+//!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], [`Fixed`], [`Constant`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
 //!   [`Optional`], [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
@@ -33,6 +33,8 @@
 //! - [`Terminated`] writes a pattern after the inner codec, a single `0x00` byte by
 //!   default. It keeps the order of the keys, but can't encode a value whose
 //!   encoding contains the pattern, like a string containing `\0`.
+//! - [`Fixed`] writes nothing more, and reads exactly `N` bytes. It keeps the
+//!   order of the keys, but only encodes the values written on exactly `N` bytes.
 //!
 //! ```
 //! use fiole::codec::{Bytes, ComposeCodec, Decode, DecodingVec, Encode, OrderedI32, Str, Terminated};
@@ -60,6 +62,8 @@ mod compose_codec;
 pub use compose_codec::*;
 mod constant;
 pub use constant::*;
+mod fixed;
+pub use fixed::*;
 mod lazy;
 pub use lazy::*;
 mod integer;

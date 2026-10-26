@@ -177,6 +177,23 @@ impl EncodingVec<Fresh> {
         }
     }
 
+    /// Inserts `count` copies of `byte` at `index` in the whole buffer, moving
+    /// the bytes after it only once.
+    ///
+    /// Made for a codec that wraps another one and needs to write something
+    /// before the bytes its inner codec wrote, like
+    /// [`PadLeftKeep`](crate::codec::PadLeftKeep). The inserted bytes count as
+    /// already written: the next codec starts after them.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is after the end of the buffer.
+    pub(crate) fn insert_repeated(&mut self, index: usize, count: usize, byte: u8) {
+        self.vec
+            .splice(index..index, std::iter::repeat_n(byte, count));
+        self.start_at = self.vec.len();
+    }
+
     /// Starts a buffer with `prefix` already written, and room for
     /// `headroom` more bytes. The codecs only see what comes after the
     /// prefix, so they can't read or modify it.
