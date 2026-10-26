@@ -22,7 +22,7 @@
 //!   the integers, the `Ordered*` codecs, [`SizedCodec`], [`Terminated`], [`Constant`], a
 //!   [`ComposeCodec`] of self-delimiting codecs, `SerdeMsgpack` and the roaring codecs.
 //! - *Final* codecs decode everything till the end: [`Str`], [`Bytes`], [`Text`], [`Unit`],
-//!   [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
+//!   [`Optional`], [`LazyDecode`], [`DecodeIgnore`], and the other serde and facet codecs.
 //!
 //! Every element of a [`ComposeCodec`] except the last one must be
 //! self-delimiting: using a final codec anywhere else is a compile error. To
@@ -64,6 +64,8 @@ mod lazy;
 pub use lazy::*;
 mod integer;
 pub use integer::*;
+mod optional;
+pub use optional::*;
 mod ordered;
 pub use ordered::*;
 mod str;
