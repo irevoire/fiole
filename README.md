@@ -62,14 +62,14 @@ your data with key prefixes.
 
 In `fiole` every [`Keyspace`] has a prefix. The one returned by
 [`Database::keyspace`] has an empty prefix, and [`Keyspace::prefixed_raw`] or
-[`Keyspace::prefixed`] (which encodes the prefix with a codec) give you a new
-keyspace whose keys all start with a prefix. The prefix is written before
+[`Keyspace::prefixed`] (which specifies the first part of a key made of parts)
+give you a new keyspace whose keys all start with a prefix. The prefix is written before
 every key and stripped when reading them back, and you can chain them as much
 as you want.
 
 ```rust
 use fiole::{KeyspaceCreateOptions, Database};
-use fiole::codec::{OrderedU32, Str};
+use fiole::codec::{ComposeCodec, OrderedU32, Str};
 
 let dir = tempfile::tempdir().unwrap();
 let db = Database::builder(dir.path()).unwrap();
@@ -78,8 +78,12 @@ let root = db.keyspace::<Str, Str>("data", KeyspaceCreateOptions::default).unwra
 // Ending the prefixes with `\0` is a good default to keep sibling prefixes apart
 let users = root.prefixed_raw(b"users\0");
 let posts = root.prefixed_raw(b"posts\0");
-// Prefixes can be chained and encoded with any codec
-let tamo = users.prefixed::<OrderedU32>(&42).unwrap();
+// Prefixes can be chained, and specify the first part of a key made of parts:
+// here the fields of each user, by the id of the user then the name of the field
+let tamo = users
+    .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
+    .prefixed(&42)
+    .unwrap();
 
 let mut wtxn = db.write_tx().unwrap();
 tamo.insert(&mut wtxn, "name", "Tamo").unwrap();

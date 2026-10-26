@@ -10,8 +10,8 @@ use std::{
 };
 
 use crate::{
+    codec::{Decode, Encode, EncodingVec, Split},
     Error, Guard, Iter, KeyRange, Rtxn, Wtxn,
-    codec::{Decode, Encode, EncodingVec},
 };
 
 /// Marks a [`Keyspace`] whose prefix is known to be empty: the one returned by
@@ -43,17 +43,22 @@ pub enum Prefixed {}
 /// stripped when they're read back. The one returned by [`Database::keyspace`](crate::Database::keyspace)
 /// has an empty prefix and is marked as [`Root`]. [`Keyspace::prefixed`] and
 /// [`Keyspace::prefixed_raw`] return a [`Prefixed`] keyspace whose prefix is
-/// the one of the current keyspace followed by the given bytes. They can be
-/// chained:
+/// the one of the current keyspace followed by the given bytes: the encoded
+/// first part of the key for [`Keyspace::prefixed`], or the raw bytes for
+/// [`Keyspace::prefixed_raw`]. They can be chained:
 ///
 /// ```
-/// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
+/// # use fiole::{Database, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
 /// #
 /// # let folder = tempfile::tempdir().unwrap();
 /// # let db = Database::builder(folder).unwrap();
 /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
 /// let users = ks.prefixed_raw(b"users\0");
-/// let tamo = users.prefixed::<OrderedU32>(&42).unwrap();
+/// // The fields of each user, by the id of the user then the name of the field
+/// let tamo = users
+///     .remap_key_type::<ComposeCodec<(OrderedU32, Str)>>()
+///     .prefixed(&42)
+///     .unwrap();
 ///
 /// let mut wtxn = db.write_tx().unwrap();
 /// tamo.insert(&mut wtxn, "name", "Tamo").unwrap();
@@ -234,8 +239,9 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
         }
     }
 
-    /// Returns a keyspace whose keys are prefixed by the prefix of this
-    /// keyspace followed by `prefix` encoded with the codec `C`.
+    /// Returns a keyspace where the `head` of the key has already been
+    /// specified. You still need to specify the rest of the key to make any
+    /// operation.
     ///
     /// See [the prefixes section](Keyspace#prefixes).
     ///
@@ -243,24 +249,82 @@ impl<Key, Value, Kind> Keyspace<Key, Value, Kind> {
     /// methods taking a key panic if the prefix followed by the key is longer.
     ///
     /// ```
-    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{OrderedU32, Str}};
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
     /// #
     /// # let folder = tempfile::tempdir().unwrap();
     /// # let db = Database::builder(folder).unwrap();
-    /// let ks = db.keyspace::<Str, Str>("default", KeyspaceCreateOptions::default).unwrap();
-    /// let user = ks.prefixed::<OrderedU32>(&42).unwrap();
+    /// // The items of each user, by the id of the user then their own id
+    /// let items = db
+    ///     .keyspace::<ComposeCodec<(OrderedU32, OrderedU32)>, Str>("items", KeyspaceCreateOptions::default)
+    ///     .unwrap();
     ///
     /// let mut wtxn = db.write_tx().unwrap();
-    /// user.insert(&mut wtxn, "name", "Tamo").unwrap();
+    /// items.insert(&mut wtxn, &(1, 10), "hat").unwrap();
+    /// items.insert(&mut wtxn, &(1, 20), "scarf").unwrap();
+    /// items.insert(&mut wtxn, &(2, 10), "boots").unwrap();
     ///
-    /// let same = ks.prefixed_raw(42u32.to_be_bytes());
-    /// assert_eq!(same.get(&wtxn, "name").unwrap().as_deref(), Some("Tamo"));
+    /// // The items of the user 1, by their own id only
+    /// let first = items.prefixed(&1).unwrap();
+    /// let ids: Vec<u32> = first.iter(&wtxn).map(|guard| guard.key().unwrap()).collect();
+    /// assert_eq!(ids, [10, 20]);
+    ///
+    /// // Writing through it writes under the head
+    /// first.insert(&mut wtxn, &30, "gloves").unwrap();
+    /// assert_eq!(items.get(&wtxn, &(1, 30)).unwrap().as_deref(), Some("gloves"));
     /// ```
-    pub fn prefixed<C: Encode>(
+    ///
+    /// To split a keyspace in parts holding different types, give it a key
+    /// starting with the name of the part, then specify that name:
+    ///
+    /// ```
+    /// # use fiole::{Database, KeyspaceCreateOptions, codec::{Bytes, ComposeCodec, OrderedU32, Str, Terminated}};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder).unwrap();
+    /// let ks = db.keyspace::<Bytes, Bytes>("default", KeyspaceCreateOptions::default).unwrap();
+    /// // The names of the users by their id, and the users by their name
+    /// let names = ks
+    ///     .remap_types::<ComposeCodec<(Terminated<Str>, OrderedU32)>, Str>()
+    ///     .prefixed("names")
+    ///     .unwrap();
+    /// let ids = ks
+    ///     .remap_types::<ComposeCodec<(Terminated<Str>, Str)>, OrderedU32>()
+    ///     .prefixed("ids")
+    ///     .unwrap();
+    ///
+    /// let mut wtxn = db.write_tx().unwrap();
+    /// names.insert(&mut wtxn, &42, "tamo").unwrap();
+    /// ids.insert(&mut wtxn, "tamo", &42).unwrap();
+    /// assert_eq!(ks.get(&wtxn, b"names\0\0\0\0\x2a").unwrap().as_deref(), Some(&b"tamo"[..]));
+    /// ```
+    ///
+    /// The head must be [`SelfDelimiting`](crate::codec::SelfDelimiting), for
+    /// no head to be the start of another one: with a raw [`Str`](crate::codec::Str)
+    /// head, the keyspace of `"al"` would see the keys of `"alice"`. Wrap it
+    /// in a [`Terminated`](crate::codec::Terminated) instead, or use
+    /// [`Keyspace::prefixed_raw`] to write the bytes of the prefix yourself.
+    ///
+    /// The keyspace it returns is typed by the rest of the key, and can't be
+    /// used as another one:
+    ///
+    /// ```compile_fail,E0308
+    /// # use fiole::{Database, Keyspace, KeyspaceCreateOptions, codec::{ComposeCodec, OrderedU32, Str}};
+    /// #
+    /// # let folder = tempfile::tempdir().unwrap();
+    /// # let db = Database::builder(folder).unwrap();
+    /// let items = db
+    ///     .keyspace::<ComposeCodec<(OrderedU32, OrderedU32)>, Str>("items", KeyspaceCreateOptions::default)
+    ///     .unwrap();
+    /// let first: Keyspace<Str, Str> = items.prefixed(&1).unwrap();
+    /// ```
+    pub fn prefixed(
         &self,
-        prefix: &C::Item,
-    ) -> Result<Keyspace<Key, Value, Prefixed>, C::Error> {
-        let prefix = C::encode(EncodingVec::with_prefix(&self.prefix, 0), prefix)?;
+        head: &<Key::Head as Encode>::Item,
+    ) -> Result<Keyspace<Key::Tail, Value, Prefixed>, <Key::Head as Encode>::Error>
+    where
+        Key: Split,
+    {
+        let prefix = Key::Head::encode(EncodingVec::with_prefix(&self.prefix, 0), head)?;
         Ok(self.with_prefix(prefix.into_fjall_slice()))
     }
 
@@ -856,8 +920,8 @@ mod test {
 
     use super::successor;
     use crate::{
+        codec::{Bytes, ComposeCodec, Str, Terminated, U32, U8},
         Database, Keyspace, KeyspaceCreateOptions, Root,
-        codec::{Bytes, Str, U8, U32},
     };
 
     fn setup() -> (tempfile::TempDir, Database, Keyspace<U8, Str, Root>) {
@@ -908,18 +972,22 @@ mod test {
         let chained = root.prefixed_raw(b"a").prefixed_raw(b"bc");
         assert_eq!(&*chained.prefix, b"abc");
         let chained = root
-            .prefixed::<U32<BigEndian>>(&1)
+            .remap_key_type::<ComposeCodec<(U32<BigEndian>, Terminated<Str>, U8)>>()
+            .prefixed(&1)
             .unwrap()
-            .prefixed::<Str>("z")
+            .prefixed("z")
             .unwrap();
-        assert_eq!(&*chained.prefix, b"\0\0\0\x01z");
+        assert_eq!(&*chained.prefix, b"\0\0\0\x01z\0");
         assert_eq!(&*root.prefix, b"");
     }
 
     #[test]
     fn typed_and_raw_prefixes_are_the_same() {
         let (_dir, db, root) = setup();
-        let typed = root.prefixed::<U32<BigEndian>>(&7).unwrap();
+        let typed = root
+            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .prefixed(&7)
+            .unwrap();
         let raw = root.prefixed_raw(7u32.to_be_bytes());
         let mut wtxn = db.write_tx().unwrap();
         typed.insert(&mut wtxn, &1, "hello").unwrap();
@@ -1256,7 +1324,10 @@ mod test {
         let users = root.prefixed_raw(&b"users\0"[..]);
         let posts = root.prefixed_raw(&b"posts\0"[..]);
         let admins = users.prefixed_raw(&b"admins\0"[..]);
-        let typed = root.prefixed::<U32<BigEndian>>(&7).unwrap();
+        let typed = root
+            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .prefixed(&7)
+            .unwrap();
 
         let mut wtxn = db.write_tx().unwrap();
         root.insert(&mut wtxn, &0, "root").unwrap();
@@ -1537,7 +1608,10 @@ mod test {
             format!("{users:?}"),
             r#"Keyspace { name: "hello", prefix: b"users\x00", .. }"#
         );
-        let typed = users.prefixed::<U32<BigEndian>>(&0xff).unwrap();
+        let typed = users
+            .remap_key_type::<ComposeCodec<(U32<BigEndian>, U8)>>()
+            .prefixed(&0xff)
+            .unwrap();
         assert_eq!(
             format!("{typed:?}"),
             r#"Keyspace { name: "hello", prefix: b"users\x00\x00\x00\x00\xff", .. }"#
@@ -1718,5 +1792,39 @@ mod test {
             crate::test_alloc::allocations(|| a.decode_key(key).unwrap().unwrap());
         assert_eq!(&*decoded, b"a key longer than the inline bytes");
         assert_eq!(allocations, 0);
+    }
+
+    #[test]
+    fn prefixed_chains_down_a_key_of_three_parts() {
+        type Key = ComposeCodec<(U8, U8, U8)>;
+        let (_dir, db, root) = setup();
+        let root = root.remap_key_type::<Key>();
+        let mut wtxn = db.write_tx().unwrap();
+        for key in [(1, 1, 1), (1, 1, 2), (1, 2, 1), (2, 1, 1)] {
+            root.insert(&mut wtxn, &key, "value").unwrap();
+        }
+
+        let one = root.prefixed(&1).unwrap();
+        let tails: Vec<(u8, u8)> = one.iter(&wtxn).map(|guard| guard.key().unwrap()).collect();
+        assert_eq!(tails, [(1, 1), (1, 2), (2, 1)]);
+
+        let one_one = one.prefixed(&1).unwrap();
+        assert_eq!(keys(one_one.iter(&wtxn)), [1, 2]);
+    }
+
+    #[test]
+    fn prefixed_only_has_the_keys_of_its_head() {
+        type Key = ComposeCodec<(&'static Terminated<Str>, U8)>;
+        let (_dir, db, root) = setup();
+        let root = root.remap_key_type::<Key>();
+        let mut wtxn = db.write_tx().unwrap();
+        for key in [("al", 1), ("alice", 2), ("bob", 3)] {
+            root.insert(&mut wtxn, &key, "value").unwrap();
+        }
+
+        // "al\0" isn't the start of "alice\0": the head ends the prefix
+        assert_eq!(keys(root.prefixed(&"al").unwrap().iter(&wtxn)), [1]);
+        assert_eq!(keys(root.prefixed(&"alice").unwrap().iter(&wtxn)), [2]);
+        assert!(root.prefixed(&"a").unwrap().is_empty(&wtxn).unwrap());
     }
 }

@@ -48,6 +48,11 @@
 //! let (name, n, raw) = Key::decode(&mut DecodingVec::new(bytes)).unwrap();
 //! assert_eq!((&*name, n, &*raw), ("alice", -3, &[1, 2][..]));
 //! ```
+//!
+//! A [`ComposeCodec`] of two elements or more is [`Split`] between it's head
+//! (first element) and it's tail (the rest).
+//! [`crate::Keyspace::prefixed`] let's you specify the head and returns
+//! a keyspace now expecting the tail to be specified as its key.
 
 use std::convert::Infallible;
 
@@ -60,6 +65,8 @@ mod bytes;
 pub use bytes::*;
 mod sized_codec;
 pub use sized_codec::*;
+mod split;
+pub use split::*;
 mod compose_codec;
 pub use compose_codec::*;
 mod constant;

@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting};
+use crate::codec::{Decode, DecodingVec, Encode, EncodingVec, Fresh, SelfDelimiting, Split};
 
 /// Encode a tuple by writing each element one after the other, with nothing in between.
 ///
@@ -110,6 +110,24 @@ impl<C1: Decode> Decode for ComposeCodec<(C1,)> {
 
 impl<C1: SelfDelimiting> SelfDelimiting for ComposeCodec<(C1,)> {}
 
+/// `ComposeCodec<(C1, C2)>` is split as `C1` then `C2`, and a longer one as
+/// `C1` then the `ComposeCodec` of the other elements: the elements are
+/// written one after the other, so the bytes of the tail are the same.
+macro_rules! split_impl {
+    ($Head:ident $Last:ident) => {
+        impl<$Head: Encode + SelfDelimiting, $Last> Split for ComposeCodec<($Head, $Last)> {
+            type Head = $Head;
+            type Tail = $Last;
+        }
+    };
+    ($Head:ident $($Rest:ident)+) => {
+        impl<$Head: Encode + SelfDelimiting, $($Rest),+> Split for ComposeCodec<($Head, $($Rest),+)> {
+            type Head = $Head;
+            type Tail = ComposeCodec<($($Rest),+)>;
+        }
+    };
+}
+
 macro_rules! compose_impl {
     // `$C` lists every element, `$Init` every element except the last one.
     ($error_name:ident => [$($C:ident)+] [$($Init:ident)+]) => {
@@ -181,6 +199,8 @@ macro_rules! compose_impl {
         }
 
         impl<$($C: SelfDelimiting),+> SelfDelimiting for ComposeCodec<($($C),+)> {}
+
+        split_impl!($($C)+);
     };
     ($N:literal) => {
         paste! {
