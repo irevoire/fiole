@@ -219,8 +219,8 @@ mod test {
     use fjall::KeyspaceCreateOptions;
 
     use crate::{
-        codec::{Str, U8},
         Database,
+        codec::{Str, U8},
     };
 
     #[test]
