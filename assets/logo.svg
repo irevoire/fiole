@@ -40,7 +40,11 @@
     #eaa865  cork        #d4874a cork shade, #ff5a6e cork dots
     #ffd23f  sparkle
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 340 345" width="680" height="690">
+<!--
+  The viewBox is cropped to what is actually drawn (the pink sticker border
+  spans x 12 to 306 and y 30 to 326), so the image has no empty margin.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 28 300 300" width="600" height="600">
   <title>fiole</title>
 
   <defs>
