@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  fiole favicon.
+  A close-up of the bulb from logo.svg, so the icon fills its square at 16 to 32px.
+
+  It uses the same coordinates as logo.svg, only the viewBox is zoomed in on the
+  round bulb (centre (120, 209), radius 88). The neck leaves the frame at the top
+  right, so you only see that the flask is open there.
+
+  Compared to logo.svg, this version:
+    - has no pink sticker border, cork, collar or sakura (they are out of frame anyway),
+    - keeps the blue drop shadow, which is what makes the icon pop on a dark tab bar,
+    - draws a thicker glass outline and water line, so they survive the downscaling,
+    - drops the small pines dotted on the slopes, which turn into noise at 16px.
+
+  Colours: see the PALETTE in logo.svg.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="25 113 198 198" width="256" height="256">
+  <title>fiole</title>
+
+  <defs>
+    <!--
+      Glass: a straight neck (x 96 to 144) opening into a round bulb of radius 88, in upright flask space.
+      The neck is longer than in logo.svg (it starts at y = 40), so its closed top end is out of frame.
+    -->
+    <path id="glass" d="M96,40 V124 A88 88 0 1 0 144 124 V40 Z"/>
+
+    <!-- The inside of the glass: the bulb (slightly smaller than the outline) plus the neck. -->
+    <clipPath id="inside-glass">
+      <circle cx="120" cy="209" r="83"/>
+      <rect x="101" y="40" width="38" height="104"/>
+    </clipPath>
+
+    <!-- Mont Aigoual: long gentle west slope, short steep east slope, flat tilted plateau. -->
+    <path id="aigoual" d="M20,300 L84,198 Q90,187 100,186 L136,183 Q144,183 148,191 L190,300 Z"/>
+    <clipPath id="on-aigoual">
+      <use href="#aigoual"/>
+    </clipPath>
+
+    <!-- A pine tree standing on (0, 0); its colour comes from the `color` attribute of each <use>. -->
+    <path id="pine" d="M0,-10.5 L7,0 L-7,0 Z"
+          fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+
+    <!-- Clouds: overlapping circles, drawn once in ink with a stroke and once in white on top. -->
+    <g id="cloud-west">
+      <circle cx="64" cy="190" r="10"/>
+      <circle cx="78" cy="182" r="12"/>
+      <circle cx="93" cy="188" r="10"/>
+    </g>
+    <g id="cloud-east">
+      <circle cx="146" cy="176" r="9"/>
+      <circle cx="159" cy="170" r="11"/>
+      <circle cx="171" cy="177" r="8"/>
+    </g>
+  </defs>
+
+
+  <!-- ================= 1. Blue drop shadow ================= -->
+  <use href="#glass" transform="translate(7,9) rotate(45 120 209)"
+       fill="#3a8dff" stroke="#3a8dff" stroke-width="12" stroke-linejoin="round"/>
+
+
+  <!-- ================= 2. The flask, tipped 45° ================= -->
+  <g transform="rotate(45 120 209)">
+
+    <!-- White glass -->
+    <use href="#glass" fill="#ffffff"/>
+
+    <g clip-path="url(#inside-glass)">
+
+      <!-- The landscape, turned back upright so it stays level. -->
+      <g transform="rotate(-45 120 209)">
+        <!-- Sky -->
+        <rect x="-200" y="-200" width="640" height="640" fill="#eef8ff"/>
+
+        <!-- Soft sun with its halo -->
+        <circle cx="70" cy="162" r="30.5" fill="#ffcf72" opacity="0.28"/>
+        <circle cx="70" cy="162" r="21" fill="#ffcf72"/>
+
+        <!-- The two smaller green mountains behind, with their shaded sides -->
+        <path d="M-10,300 C10,250 30,214 52,212 C74,214 92,250 108,300 Z" fill="#93d79a"/>
+        <path d="M52,212 C74,214 92,250 108,300 H80 C76,260 66,226 52,212 Z" fill="#7cc487"/>
+        <path d="M130,300 C150,250 166,208 186,206 C206,208 226,250 250,300 Z" fill="#93d79a"/>
+        <path d="M186,206 C206,208 226,250 250,300 H214 C210,256 200,222 186,206 Z" fill="#7cc487"/>
+
+        <!-- Mont Aigoual -->
+        <use href="#aigoual" fill="#45b464"/>
+        <g clip-path="url(#on-aigoual)">
+          <!-- Shade on the steep eastern face -->
+          <path d="M140,180 L164,320 H260 V100 Z" fill="#33975a"/>
+          <!-- Grassy plateau -->
+          <rect x="0" y="150" width="240" height="52" fill="#d9e69a"/>
+          <!-- Tree line, following the slope -->
+          <use href="#pine" color="#45b464" transform="translate(74,211.5)"/>
+          <use href="#pine" color="#45b464" transform="translate(85,210.2)"/>
+          <use href="#pine" color="#45b464" transform="translate(96,208.9)"/>
+          <use href="#pine" color="#45b464" transform="translate(107,207.6)"/>
+          <use href="#pine" color="#45b464" transform="translate(118,206.2)"/>
+          <use href="#pine" color="#45b464" transform="translate(129,207.1)"/>
+          <use href="#pine" color="#33975a" transform="translate(140,208.4)"/>
+          <use href="#pine" color="#33975a" transform="translate(151,209.7)"/>
+          <use href="#pine" color="#33975a" transform="translate(162,211)"/>
+        </g>
+
+        <!-- Clouds around the summit -->
+        <g fill="#23264a" stroke="#23264a" stroke-width="7">
+          <use href="#cloud-west"/>
+          <use href="#cloud-east"/>
+        </g>
+        <g fill="#ffffff">
+          <use href="#cloud-west"/>
+          <use href="#cloud-east"/>
+        </g>
+
+        <!-- The face -->
+        <circle cx="110" cy="230" r="6" fill="#23264a"/>
+        <circle cx="134" cy="230" r="6" fill="#23264a"/>
+        <circle cx="112" cy="228" r="2" fill="#ffffff"/>
+        <circle cx="136" cy="228" r="2" fill="#ffffff"/>
+        <ellipse cx="100" cy="242" rx="7" ry="4" fill="#ff8fb8" opacity="0.9"/>
+        <ellipse cx="144" cy="242" rx="7" ry="4" fill="#ff8fb8" opacity="0.9"/>
+        <path d="M115,239 Q118.5,244 122,239 Q125.5,244 129,239"
+              fill="none" stroke="#23264a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Water, with a thicker line than in logo.svg -->
+        <path d="M-40,268 Q-15,256 10,268 T60,268 T110,268 T160,268 T210,268 T260,268 V420 H-40 Z" fill="#6cc4ff"/>
+        <path d="M-40,268 Q-15,256 10,268 T60,268 T110,268 T160,268 T210,268 T260,268"
+              fill="none" stroke="#23264a" stroke-width="8" stroke-linecap="round"/>
+      </g>
+
+      <!-- Glass reflections, turning with the glass -->
+      <path d="M176.7,161.4 A74 74 0 0 1 132.8 281.9"
+            fill="none" stroke="#bfe3f2" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+      <path d="M64,196 Q58,226 70,252"
+            fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" opacity="0.95"/>
+    </g>
+
+    <!-- Thick glass outline; its open neck runs out of the frame at the top right. -->
+    <use href="#glass" fill="none" stroke="#23264a" stroke-width="12" stroke-linejoin="round"/>
+  </g>
+</svg>

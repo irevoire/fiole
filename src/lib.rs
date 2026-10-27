@@ -1,4 +1,10 @@
 #![doc = include_str!("../README.md")]
+#![doc(
+    html_favicon_url = "https://raw.githubusercontent.com/irevoire/fiole/refs/heads/main/assets/favicon.svg"
+)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/irevoire/fiole/refs/heads/main/assets/logo.svg"
+)]
 
 use std::{convert::Infallible, marker::PhantomData};
 
@@ -213,8 +219,8 @@ mod test {
     use fjall::KeyspaceCreateOptions;
 
     use crate::{
-        Database,
         codec::{Str, U8},
+        Database,
     };
 
     #[test]

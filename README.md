@@ -1,3 +1,6 @@
+<p align="center"><img width="280px" title="The fiole logo is a tipped-over potion flask with a smiling mountain inside" src="https://raw.githubusercontent.com/irevoire/fiole/refs/heads/main/assets/logo.svg"></p>
+<h1 align="center">fiole</h1>
+
 `fiole` is a high level opinionated wrapper around [`fjall`].
 
 # Why "opinionated"
