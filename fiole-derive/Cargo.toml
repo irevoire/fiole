@@ -1,13 +1,13 @@
 [package]
 name = "fiole-derive"
-version = "0.3.0"
-edition = "2024"
-rust-version = "1.90"
 description = "The derive macros of fiole"
-documentation = "https://docs.rs/fiole"
-repository = "https://github.com/irevoire/fiole"
-authors = ["Tamo <irevoire@hotmail.fr>"]
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [lib]
 proc-macro = true

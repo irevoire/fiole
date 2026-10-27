@@ -132,6 +132,7 @@ The three kind of property you might want to check are:
 - A codec that will be used as a key in a range query needs to be ordered.
   You might want to make sure that the values sorts the same way the encoded
   values do: `T.cmp(U) == encode(T).cmp(encode(U))`
+
 With its `arbitrary` feature, fiole gives you a property check for each of them:
 
 - [`check_round_trip`](https://docs.rs/fiole/latest/fiole/codec/fn.check_round_trip.html): a value encoded then decoded

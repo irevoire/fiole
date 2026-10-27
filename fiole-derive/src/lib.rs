@@ -5,7 +5,7 @@ mod attrs;
 mod expand;
 
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 /// Makes codec from structures annotation, written using the tuple codec with the
 /// codecs defined for all fields.
