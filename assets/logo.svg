@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  fiole logo.
+  A kawaii potion flask (a fiole in french), tipped at 45°, with a mountain inside.
+  (it's supposed to be the Mont Aigoual)
+
+  HOW THIS FILE IS ORGANISED
+
+  The flask is drawn upright in "flask space", then the whole thing is rotated
+  45° clockwise around the centre of the round bulb, (120, 209).
+
+  Layers, back to front:
+    1. Pink sticker border  (the flask silhouette with a very thick stroke)
+    2. Blue drop shadow     (the same silhouette, shifted down and right)
+    3. The flask
+       a. white glass
+       b. the landscape, clipped to the inside of the glass
+       c. glass reflections
+       d. glass outline
+       e. cork, with its sakura flower
+       f. collar ring
+    4. Sparkles around the flask
+
+  PALETTE
+    #23264a  ink         every outline
+    #ffd6ee  sticker     pink sticker border
+    #3a8dff  shadow      blue drop shadow
+    #ffffff  glass
+    #bfe3f2  glass shade light blue reflections
+    #eef8ff  sky
+    #ffcf72  sun         soft warm yellow, with a faint halo
+    #45b464  forest      Mont Aigoual
+    #33975a  forest shade
+    #1f7a44  pine        darker trees dotted on the slopes
+    #d9e69a  meadow      the bare, grassy plateau on top
+    #93d79a  hill        the two smaller mountains behind
+    #7cc487  hill shade
+    #6cc4ff  water
+    #ff8fb8  blush
+    #eaa865  cork        #d4874a cork shade, #ff5a6e cork dots
+    #ffd23f  sparkle
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 340 345" width="680" height="690">
+  <title>fiole</title>
+
+  <defs>
+    <!-- ===== Flask parts, in upright flask space ===== -->
+
+    <!-- Glass: a straight neck (x 96 to 144) opening into a round bulb of radius 88. -->
+    <path id="glass" d="M96,88 V124 A88 88 0 1 0 144 124 V88 Z"/>
+
+    <!-- Cork: a tapered plug, wide at the top, narrow where it enters the neck. -->
+    <path id="cork" d="M86,22 Q86,13 95,13 L145,13 Q154,13 154,22 L141,106 L99,106 Z"/>
+
+    <!-- Collar: the rounded ring around the top of the neck. -->
+    <rect id="collar" x="70" y="60" width="100" height="28" rx="14"/>
+
+    <!-- The whole outline in one piece, used for the sticker border and the drop shadow. -->
+    <g id="silhouette">
+      <use href="#glass"/>
+      <use href="#cork"/>
+      <use href="#collar"/>
+    </g>
+
+    <!-- The inside of the glass: the bulb (slightly smaller than the outline) plus the neck. -->
+    <clipPath id="inside-glass">
+      <circle cx="120" cy="209" r="84"/>
+      <rect x="100" y="84" width="40" height="60"/>
+    </clipPath>
+
+    <!-- ===== Landscape parts, in upright world space ===== -->
+
+    <!--
+      Mont Aigoual: a long, gentle western slope (left), a short, steep eastern
+      slope (right), and a flat plateau on top that tilts up slightly to the east.
+    -->
+    <path id="aigoual" d="M20,300 L84,198 Q90,187 100,186 L136,183 Q144,183 148,191 L190,300 Z"/>
+    <clipPath id="on-aigoual">
+      <use href="#aigoual"/>
+    </clipPath>
+
+    <!--
+      A pine tree: a triangle 14 wide and 10.5 tall, standing on (0, 0).
+      Its colour comes from the `color` attribute of each <use>.
+    -->
+    <path id="pine" d="M0,-10.5 L7,0 L-7,0 Z"
+          fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+
+    <!--
+      Clouds are a few overlapping circles. Each cloud is drawn twice: first in
+      ink with a thick stroke, then in white with no stroke on top. The circles
+      merge into one puffy shape with a single outline.
+    -->
+    <g id="cloud-west">
+      <circle cx="64" cy="190" r="10"/>
+      <circle cx="78" cy="182" r="12"/>
+      <circle cx="93" cy="188" r="10"/>
+    </g>
+    <g id="cloud-east">
+      <circle cx="146" cy="176" r="9"/>
+      <circle cx="159" cy="170" r="11"/>
+      <circle cx="171" cy="177" r="8"/>
+    </g>
+
+    <!-- Water surface: a gentle wave at y = 268, wide enough to fill the tipped bulb. -->
+    <path id="wave" d="M-40,268 Q-15,256 10,268 T60,268 T110,268 T160,268 T210,268 T260,268"/>
+
+    <!-- ===== Decorations ===== -->
+
+    <!-- One sakura petal, pointing up from (0, 0), with the classic notch at its tip. -->
+    <path id="petal" d="M0,0 C-10,-6 -11,-18 -5,-22 L0,-18 L5,-22 C11,-18 10,-6 0,0 Z"/>
+
+    <!-- A four-pointed sparkle of radius 1. Scale it to the size you want. -->
+    <path id="sparkle" d="M0,-1 Q0,0 1,0 Q0,0 0,1 Q0,0 -1,0 Q0,0 0,-1 Z"/>
+  </defs>
+
+
+  <!-- ================= 1. Pink sticker border ================= -->
+  <!-- A 40px stroke around the silhouette, and again around the shadow, so the border covers both. -->
+  <g fill="#ffd6ee" stroke="#ffd6ee" stroke-width="40" stroke-linejoin="round">
+    <use href="#silhouette" transform="rotate(45 120 209)"/>
+    <use href="#silhouette" transform="translate(7,9) rotate(45 120 209)"/>
+  </g>
+
+
+  <!-- ================= 2. Blue drop shadow ================= -->
+  <!-- Shifted down and right in world space, so the light comes from the top left whatever the tilt. -->
+  <use href="#silhouette" transform="translate(7,9) rotate(45 120 209)"
+       fill="#3a8dff" stroke="#3a8dff" stroke-width="9" stroke-linejoin="round"/>
+
+
+  <!-- ================= 3. The flask ================= -->
+  <!-- Everything in this group is in flask space. Change the 45 to tip it more or less. -->
+  <g transform="rotate(45 120 209)">
+
+    <!-- 3a. White glass -->
+    <use href="#glass" fill="#ffffff"/>
+
+    <g clip-path="url(#inside-glass)">
+
+      <!-- 3b. The landscape, turned back upright. -->
+      <g transform="rotate(-45 120 209)">
+
+        <!-- Sky: much bigger than needed, the clip trims it to the glass. -->
+        <rect x="-200" y="-200" width="640" height="640" fill="#eef8ff"/>
+
+        <!-- Soft sun: a faint halo behind the disc. -->
+        <circle cx="70" cy="162" r="30.5" fill="#ffcf72" opacity="0.28"/>
+        <circle cx="70" cy="162" r="21" fill="#ffcf72"/>
+
+        <!-- Two smaller, fully green mountains behind Aigoual. They are lighter so they look further away. -->
+        <g>
+          <!-- West hill: body, shaded right side, two pines -->
+          <path d="M-10,300 C10,250 30,214 52,212 C74,214 92,250 108,300 Z" fill="#93d79a"/>
+          <path d="M52,212 C74,214 92,250 108,300 H80 C76,260 66,226 52,212 Z" fill="#7cc487"/>
+          <use href="#pine" color="#7cc487" transform="translate(40,236) scale(0.714)"/>
+          <use href="#pine" color="#7cc487" transform="translate(60,246) scale(0.714)"/>
+
+          <!-- East hill -->
+          <path d="M130,300 C150,250 166,208 186,206 C206,208 226,250 250,300 Z" fill="#93d79a"/>
+          <path d="M186,206 C206,208 226,250 250,300 H214 C210,256 200,222 186,206 Z" fill="#7cc487"/>
+          <use href="#pine" color="#7cc487" transform="translate(178,230) scale(0.714)"/>
+          <use href="#pine" color="#7cc487" transform="translate(196,240) scale(0.714)"/>
+        </g>
+
+        <!-- Mont Aigoual, covered in forest. -->
+        <use href="#aigoual" fill="#45b464"/>
+
+        <!-- Everything painted on the mountain is clipped to its shape. -->
+        <g clip-path="url(#on-aigoual)">
+          <!-- Shade on the steep eastern face -->
+          <path d="M140,180 L164,320 H260 V100 Z" fill="#33975a"/>
+
+          <!-- Bare, grassy plateau: everything above y = 202 -->
+          <rect x="0" y="150" width="240" height="52" fill="#d9e69a"/>
+
+          <!--
+            The tree line: a row of pines in the forest colour, pushing up into
+            the meadow. They sit a little lower towards the edges, following the slope.
+            The three on the right use the shade colour, to match the eastern face.
+          -->
+          <use href="#pine" color="#45b464" transform="translate(74,211.5)"/>
+          <use href="#pine" color="#45b464" transform="translate(85,210.2)"/>
+          <use href="#pine" color="#45b464" transform="translate(96,208.9)"/>
+          <use href="#pine" color="#45b464" transform="translate(107,207.6)"/>
+          <use href="#pine" color="#45b464" transform="translate(118,206.2)"/>
+          <use href="#pine" color="#45b464" transform="translate(129,207.1)"/>
+          <use href="#pine" color="#33975a" transform="translate(140,208.4)"/>
+          <use href="#pine" color="#33975a" transform="translate(151,209.7)"/>
+          <use href="#pine" color="#33975a" transform="translate(162,211)"/>
+
+          <!-- A few darker pines dotted on the slopes, away from the face. -->
+          <use href="#pine" color="#1f7a44" transform="translate(74,252)"/>
+          <use href="#pine" color="#1f7a44" transform="translate(80,230) scale(0.857)"/>
+          <use href="#pine" color="#1f7a44" transform="translate(156,224) scale(0.714)"/>
+          <use href="#pine" color="#1f7a44" transform="translate(160,254)"/>
+        </g>
+
+        <!-- Clouds hanging around the summit: ink outline first, white fill on top. -->
+        <g fill="#23264a" stroke="#23264a" stroke-width="7">
+          <use href="#cloud-west"/>
+          <use href="#cloud-east"/>
+        </g>
+        <g fill="#ffffff">
+          <use href="#cloud-west"/>
+          <use href="#cloud-east"/>
+        </g>
+
+        <!-- The face: two shiny eyes, rosy cheeks and a little "w" mouth. -->
+        <g>
+          <circle cx="110" cy="230" r="6" fill="#23264a"/>
+          <circle cx="134" cy="230" r="6" fill="#23264a"/>
+          <circle cx="112" cy="228" r="2" fill="#ffffff"/>
+          <circle cx="136" cy="228" r="2" fill="#ffffff"/>
+          <ellipse cx="100" cy="242" rx="7" ry="4" fill="#ff8fb8" opacity="0.9"/>
+          <ellipse cx="144" cy="242" rx="7" ry="4" fill="#ff8fb8" opacity="0.9"/>
+          <path d="M115,239 Q118.5,244 122,239 Q125.5,244 129,239"
+                fill="none" stroke="#23264a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <!-- Water: stays level whatever the tilt. The fill is closed off far below the clip. -->
+        <path d="M-40,268 Q-15,256 10,268 T60,268 T110,268 T160,268 T210,268 T260,268 V420 H-40 Z" fill="#6cc4ff"/>
+        <use href="#wave" fill="none" stroke="#23264a" stroke-width="6" stroke-linecap="round"/>
+      </g>
+
+      <!-- 3c. Glass reflections. They stay in flask space, so they turn with the glass. -->
+      <!-- Light blue crescent along the inside of the bulb, opposite the highlight -->
+      <path d="M176.7,161.4 A74 74 0 0 1 132.8 281.9"
+            fill="none" stroke="#bfe3f2" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+      <!-- The same light blue down one side of the neck -->
+      <path d="M137,96 V130" stroke="#bfe3f2" stroke-width="8" stroke-linecap="round"/>
+      <!-- White shine on the other side of the bulb -->
+      <path d="M64,196 Q58,226 70,252"
+            fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" opacity="0.95"/>
+    </g>
+
+    <!-- 3d. The thick, goofy glass outline. -->
+    <use href="#glass" fill="none" stroke="#23264a" stroke-width="9" stroke-linejoin="round"/>
+
+    <!-- 3e. Cork: base colour, a shaded side, some dots, then its outline. -->
+    <use href="#cork" fill="#eaa865"/>
+    <path d="M140,15 Q150,15 151,22 L139,104 L130,104 L136,22 Z" fill="#d4874a"/>
+    <g fill="#ff5a6e">
+      <circle cx="104" cy="32" r="3.5"/>
+      <circle cx="126" cy="26" r="3.5"/>
+      <circle cx="114" cy="48" r="3.5"/>
+      <circle cx="134" cy="44" r="3.5"/>
+      <circle cx="108" cy="96" r="3.5"/>
+    </g>
+    <use href="#cork" fill="none" stroke="#23264a" stroke-width="9" stroke-linejoin="round"/>
+
+    <!-- Sakura flower pinned to the top corner of the cork: five petals, a pink heart and five stamens. -->
+    <g transform="translate(150,20) scale(1.15)">
+      <g fill="#ffc6e0" stroke="#e0569a" stroke-width="2.5" stroke-linejoin="round">
+        <use href="#petal"/>
+        <use href="#petal" transform="rotate(72)"/>
+        <use href="#petal" transform="rotate(144)"/>
+        <use href="#petal" transform="rotate(216)"/>
+        <use href="#petal" transform="rotate(288)"/>
+      </g>
+      <circle r="4" fill="#ff7bb5"/>
+      <g fill="#e0569a">
+        <circle cx="0" cy="-7" r="1.6"/>
+        <circle cx="6.66" cy="-2.16" r="1.6"/>
+        <circle cx="4.11" cy="5.66" r="1.6"/>
+        <circle cx="-4.11" cy="5.66" r="1.6"/>
+        <circle cx="-6.66" cy="-2.16" r="1.6"/>
+      </g>
+    </g>
+
+    <!-- 3f. Collar ring, drawn last so it sits over the neck and the cork, with a small glint. -->
+    <use href="#collar" fill="#ffffff" stroke="#23264a" stroke-width="9"/>
+    <path d="M160,67 Q164,74 160,81" fill="none" stroke="#bfe3f2" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+
+  <!-- ================= 4. Sparkles ================= -->
+  <!-- The stroke is divided by the scale so every outline stays 3px wide. -->
+  <!-- g fill="#ffd23f" stroke="#23264a" stroke-linejoin="round">
+    <use href="#sparkle" transform="translate(28,96) scale(12)" stroke-width="0.25"/>
+    <use href="#sparkle" transform="translate(306,196) scale(10)" stroke-width="0.3"/>
+    <use href="#sparkle" transform="translate(40,318) scale(8)" stroke-width="0.375"/>
+  </g -->
+</svg>
