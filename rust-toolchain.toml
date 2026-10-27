@@ -1,0 +1,9 @@
+# The version of Rust the repository is developed with, locally and in the
+# CI. Nothing changes when a new version is released: bump it here when you
+# want to, then write the compile errors of the derive again with
+# `TRYBUILD=overwrite cargo test -p fiole-derive --test errors` and review
+# them, and fix the new lints. It doesn't apply to the crates depending on
+# fiole, which build with their own toolchain.
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]

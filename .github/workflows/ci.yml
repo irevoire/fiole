@@ -7,39 +7,45 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# Every job runs on the version of `rust-toolchain.toml`, but the ones setting
+# `RUSTUP_TOOLCHAIN`, which takes precedence over it.
+
 jobs:
   build_and_test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-          - nightly
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: rustup toolchain install
       - run: cargo build --verbose --workspace --all-targets --all-features
-      # The compile errors of the derive are checked on stable only, below:
-      # their wording changes with the version of rustc
-      - run: cargo test --verbose --workspace --all-targets --all-features --exclude fiole-derive
+      - run: cargo test --verbose --workspace --all-targets --all-features
       # `--all-targets` doesn't run the doctests
       - run: cargo test --verbose --workspace --doc --all-features
-      - if: matrix.toolchain == 'stable'
-        run: cargo test --verbose -p fiole-derive --all-features --test errors
+  nightly:
+    name: Test on nightly
+    runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install nightly
+      - run: cargo build --verbose --workspace --all-targets --all-features
+      # Without the compile errors of the derive, worded for the version of `rust-toolchain.toml`
+      - run: cargo test --verbose --workspace --all-targets --all-features --exclude fiole-derive
+      - run: cargo test --verbose --workspace --doc --all-features
   fmt:
     name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup toolchain install
       - run: cargo fmt --check --verbose --all
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup toolchain install
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
   doc:
     name: Documentation
@@ -48,7 +54,7 @@ jobs:
       RUSTDOCFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup toolchain install
       - run: cargo doc --workspace --all-features --no-deps
   features:
     name: Feature ${{ matrix.feature }} alone
@@ -69,20 +75,24 @@ jobs:
           - derive
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup toolchain install
       - run: cargo clippy --all-targets --no-default-features --features ${{ matrix.feature }} -- -D warnings
   no_features:
     name: No feature
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup toolchain install
       - run: cargo clippy --all-targets --no-default-features -- -D warnings
   msrv:
     name: Minimum supported Rust version
     runs-on: ubuntu-latest
+    env:
+      # The `rust-version` of `Cargo.toml`, quoted for YAML not to read `1.9`
+      RUSTUP_TOOLCHAIN: "1.90"
     steps:
       - uses: actions/checkout@v4
-      - run: rustup toolchain install 1.90 && rustup default 1.90
+      - run: rustup toolchain install 1.90
+      # Without the compile errors of the derive, worded for the version of `rust-toolchain.toml`
       - run: cargo test --workspace --all-targets --all-features --exclude fiole-derive
       - run: cargo test --workspace --doc --all-features
