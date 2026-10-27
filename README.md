@@ -119,3 +119,97 @@ A few things to keep in mind:
   taking a key panic if the prefix followed by the key is longer.
 - The methods working on the whole fjall keyspace, like
   [`Keyspace::approximate_len`], are only available on the root.
+
+# Testing your codecs
+
+As a user you usually expect your codec to be read like they were written.
+That's something fiole can't enforce through compiler trick, so instead
+it gives you tools to write tests yourself against your plugins.
+The three kind of property you might want to check are:
+- A codec that serialized data can deserialize it back.
+- A codec marked as [`SelfDelimiting`](codec::SelfDelimiting) stops at the
+  end of its bytes and will never starts reading the bytes of the next codec.
+- A codec that will be used as a key in a range query needs to be ordered.
+  You might want to make sure that the values sorts the same way the encoded
+  values do: `T.cmp(U) == encode(T).cmp(encode(U))`
+With its `arbitrary` feature, fiole gives you a property check for each of them:
+
+- [`check_round_trip`](https://docs.rs/fiole/latest/fiole/codec/fn.check_round_trip.html): a value encoded then decoded
+  is the same value, and all the bytes are read.
+- [`check_self_delimiting`](https://docs.rs/fiole/latest/fiole/codec/fn.check_self_delimiting.html): same, with random
+  bytes after the value, which must be left to read. Run it on every codec
+  you mark `SelfDelimiting`.
+- [`check_order_preserving`](https://docs.rs/fiole/latest/fiole/codec/fn.check_order_preserving.html): two values
+  compare like their encoded bytes. Run it on every codec you use for keys
+  you iterate in order.
+
+They take random values from [`arbitrary`](https://docs.rs/arbitrary), so
+they run with any library built on it. We recommand using
+[`arbtest`](https://docs.rs/arbtest). It's generally enough and integrate
+nicely with the rust test system.
+Each check panics with the value and its bytes when a property doesn't hold,
+and gives you the seed needed to reproduce the bug.
+
+Enable the feature for your tests only:
+
+```toml
+[dev-dependencies]
+fiole = { version = "0.3", features = ["arbitrary"] }
+arbitrary = { version = "1", features = ["derive"] }
+arbtest = "0.3"
+```
+
+They're worth running on every codec you write, by hand or with
+`#[derive(Fiole)]`: the derive can't check that each field is read back as it
+was written, through a `From` that could change it.
+
+```rust
+# #[cfg(all(feature = "arbitrary", feature = "derive"))] {
+use arbitrary::{Arbitrary, Unstructured};
+use fiole::Fiole;
+use fiole::codec::{
+    OrderedI64, OrderedU32, Text, check_order_preserving_with, check_round_trip,
+};
+
+/// The posts of a user, by date.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Arbitrary, Fiole)]
+struct PostKey {
+    #[fiole(codec = OrderedU32)]
+    user: u32,
+    #[fiole(codec = OrderedI64)]
+    posted_at: i64,
+    #[fiole(codec = Text<String>)]
+    slug: String,
+}
+
+// In a `#[test]`
+arbtest::arbtest(check_round_trip::<PostKey, PostKey>);
+
+// `PostKey` ends with a `Text<String>`, which is not "self delimited", it
+// reads everything until there is no bytes left.
+// The following test doesn't even compile in this case, but that's what you
+// would use for your self delimited codecs.
+
+// arbtest::arbtest(check_self_delimiting::<PostKey, PostKey>);
+
+// The derived `Ord` compares the fields in order, like the bytes of the key.
+// But two random keys almost never have the same user, so their dates would
+// almost never be compared: the `_with` versions take the generator of the
+// values, to pick the first fields in a small range.
+fn post_key(u: &mut Unstructured) -> arbitrary::Result<PostKey> {
+    Ok(PostKey {
+        user: u.int_in_range(0..=2)?,
+        posted_at: u.int_in_range(-20..=20)?,
+        slug: u.arbitrary()?,
+    })
+}
+arbtest::arbtest(|u| check_order_preserving_with::<PostKey, PostKey>(u, post_key));
+
+// When a check fails, arbtest prints the seed of the values it failed on, like
+// `Seed: 0x9d936a7b000001c5` if `posted_at` was written with `Terminated<Text<i64>>`,
+// whose `10` sorts before `9`. Give it to `seed` to replay only these values
+// while you fix the codec:
+arbtest::arbtest(|u| check_order_preserving_with::<PostKey, PostKey>(u, post_key))
+    .seed(0x9d936a7b000001c5);
+# }
+```
