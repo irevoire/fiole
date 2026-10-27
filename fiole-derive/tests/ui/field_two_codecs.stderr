@@ -1,0 +1,5 @@
+error: `codec` is given twice
+ --> tests/ui/field_two_codecs.rs:6:13
+  |
+6 |     #[fiole(codec = fiole::codec::U8)]
+  |             ^^^^^

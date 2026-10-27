@@ -1,0 +1,5 @@
+error: unknown key: the struct takes `name` and `error`
+ --> tests/ui/unknown_key.rs:4:9
+  |
+4 | #[fiole(rename = KeyCodec)]
+  |         ^^^^^^

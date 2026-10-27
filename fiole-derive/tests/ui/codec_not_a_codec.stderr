@@ -1,0 +1,39 @@
+error[E0277]: `u32` isn't a codec: it can't encode anything
+ --> tests/ui/codec_not_a_codec.rs:6:21
+  |
+6 |     #[fiole(codec = u32)]
+  |                     ^^^ not a codec
+  |
+  = help: the trait `Encode` is not implemented for `u32`
+  = note: the codecs are types like `Str`, `OrderedU32` or `SerdeJson<T>` in `fiole::codec`, which say how an item is written
+  = note: the `codec` of a field of a struct deriving `Fiole` must be one of them
+  = help: the following other types implement trait `Encode`:
+            &'a T
+            (C1, C2)
+            (C1, C2, C3)
+            (C1, C2, C3, C4)
+            (C1, C2, C3, C4, C5)
+            (C1, C2, C3, C4, C5, C6)
+            (C1, C2, C3, C4, C5, C6, C7)
+            (C1, C2, C3, C4, C5, C6, C7, C8)
+          and $N others
+
+error[E0277]: `u32` isn't a codec: it can't decode anything
+ --> tests/ui/codec_not_a_codec.rs:6:21
+  |
+6 |     #[fiole(codec = u32)]
+  |                     ^^^ not a codec
+  |
+  = help: the trait `Decode` is not implemented for `u32`
+  = note: the codecs are types like `Str`, `OrderedU32` or `SerdeJson<T>` in `fiole::codec`, which say how an item is written
+  = note: the `codec` of a field of a struct deriving `Fiole` must be one of them
+  = help: the following other types implement trait `Decode`:
+            &T
+            (C1, C2)
+            (C1, C2, C3)
+            (C1, C2, C3, C4)
+            (C1, C2, C3, C4, C5)
+            (C1, C2, C3, C4, C5, C6)
+            (C1, C2, C3, C4, C5, C6, C7)
+            (C1, C2, C3, C4, C5, C6, C7, C8)
+          and $N others

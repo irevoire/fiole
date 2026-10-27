@@ -1,0 +1,5 @@
+error: `name` is the name of the codec type to generate, like `name = MyCodec`
+ --> tests/ui/wrong_value.rs:4:16
+  |
+4 | #[fiole(name = 1)]
+  |                ^

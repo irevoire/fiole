@@ -4,6 +4,8 @@ use std::{convert::Infallible, marker::PhantomData};
 
 pub mod codec;
 mod database;
+#[cfg(all(test, feature = "derive"))]
+mod derive_tests;
 mod error;
 mod key_range;
 mod keyspace;
@@ -17,6 +19,17 @@ pub use fjall::{Conflict, KeyspaceCreateOptions, PersistMode};
 pub use key_range::KeyRange;
 pub use keyspace::{Keyspace, Prefixed, Root};
 pub use txn::{Rtxn, Wtxn};
+
+#[cfg(feature = "derive")]
+pub use fiole_derive::Fiole;
+
+#[cfg(feature = "derive")]
+#[doc(hidden)]
+pub mod derive_support;
+
+// For the code `#[derive(Fiole)]` generates, which names `::fiole`, to also
+// work in the tests and examples of fiole itself.
+extern crate self as fiole;
 
 pub use byteorder;
 pub use byteview;

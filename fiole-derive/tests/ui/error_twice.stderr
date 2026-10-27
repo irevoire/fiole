@@ -1,0 +1,5 @@
+error: `error` is given twice
+ --> tests/ui/error_twice.rs:5:9
+  |
+5 | #[fiole(error = std::convert::Infallible)]
+  |         ^^^^^

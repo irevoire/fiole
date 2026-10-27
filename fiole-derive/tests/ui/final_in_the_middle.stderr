@@ -1,0 +1,18 @@
+error[E0277]: `Text<u32>` decodes everything till the end, so it can't be followed by anything
+ --> tests/ui/final_in_the_middle.rs:6:21
+  |
+6 |     #[fiole(codec = Text<u32>)]
+  |                     ^^^^ it can only be the last element of a tuple of codecs, or the last field of a struct deriving `Fiole`
+  |
+  = help: the trait `SelfDelimiting` is not implemented for `Text<u32>`
+  = note: wrap it in `Fixed`, `Terminated` or `SizedCodec` for it to know where it ends
+  = help: the following other types implement trait `SelfDelimiting`:
+            &T
+            (C1, C2)
+            (C1, C2, C3)
+            (C1, C2, C3, C4)
+            (C1, C2, C3, C4, C5)
+            (C1, C2, C3, C4, C5, C6)
+            (C1, C2, C3, C4, C5, C6, C7)
+            (C1, C2, C3, C4, C5, C6, C7, C8)
+          and $N others

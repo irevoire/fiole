@@ -1,0 +1,5 @@
+error: `name` needs a value, like `name = MyCodec`
+ --> tests/ui/key_without_value.rs:4:9
+  |
+4 | #[fiole(name)]
+  |         ^^^^

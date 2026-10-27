@@ -1,0 +1,5 @@
+error: a struct deriving `Fiole` can have at most 19 fields
+  --> tests/ui/too_many_fields.rs:10:74
+   |
+10 |     #[fiole(codec = P)] P, #[fiole(codec = P)] P, #[fiole(codec = P)] P, #[fiole(codec = P)] P,
+   |                                                                          ^^^^^^^^^^^^^^^^^^^^^

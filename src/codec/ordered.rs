@@ -40,7 +40,7 @@ macro_rules! define_ordered_int {
         #[doc = concat!("Encodable version of [`", stringify!($signed), "`] that keeps the numeric order, to be used as a key.")]
         ///
         /// The number is stored big-endian with its sign bit flipped, so the
-        /// smallest number is encoded as `0x00…` and the biggest as `0xFF…`,
+        /// smallest number is encoded as `0x00...` and the biggest as `0xFF...`,
         /// and the encoded bytes sort like the numbers: negative numbers come
         /// before positive ones.
         ///
@@ -109,7 +109,7 @@ macro_rules! define_ordered_float {
         /// This codec is self-delimiting: it can be followed by other codecs in a tuple of codecs.
         ///
         #[doc = concat!("The order is the one of [`", stringify!($float), "::total_cmp`]:")]
-        /// `-NaN < -∞ < … < -0.0 < 0.0 < … < ∞ < NaN`. Every value, including
+        /// `-NaN < -∞ < ... < -0.0 < 0.0 < ... < ∞ < NaN`. Every value, including
         /// the sign of zero and the payload of NaNs, survives a round-trip.
         ///
         /// ```

@@ -1,0 +1,16 @@
+error[E0599]: the method `prefixed` exists for struct `fiole::Keyspace<Key, fiole::codec::Str, Root>`, but its trait bounds were not satisfied
+  --> tests/ui/prefixed_single_field.rs:14:18
+   |
+ 6 | struct Key {
+   | ---------- doesn't satisfy `Key: fiole::codec::Split`
+...
+14 |     let _ = keys.prefixed(&1);
+   |                  ^^^^^^^^
+   |
+   = note: the following trait bounds were not satisfied:
+           `Key: fiole::codec::Split`
+note: the trait `fiole::codec::Split` must be implemented
+  --> $WORKSPACE/src/codec/split.rs
+   |
+   | pub trait Split {
+   | ^^^^^^^^^^^^^^^

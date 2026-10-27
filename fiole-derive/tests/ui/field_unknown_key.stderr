@@ -1,0 +1,5 @@
+error: unknown key: a field takes `codec`, like `#[fiole(codec = Terminated<Str>)]`
+ --> tests/ui/field_unknown_key.rs:5:13
+  |
+5 |     #[fiole(with = U8)]
+  |             ^^^^

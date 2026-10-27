@@ -5,6 +5,12 @@ use fjall::Slice;
 use crate::codec::DecodingVec;
 
 /// Define how to encode an object to the bytes that will be stored in fjall.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` isn't a codec: it can't encode anything",
+    label = "not a codec",
+    note = "the codecs are types like `Str`, `OrderedU32` or `SerdeJson<T>` in `fiole::codec`, which say how an item is written",
+    note = "the `codec` of a field of a struct deriving `Fiole` must be one of them"
+)]
 pub trait Encode {
     /// The type to encode.
     type Item: ?std::marker::Sized;

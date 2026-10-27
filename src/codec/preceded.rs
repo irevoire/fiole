@@ -87,8 +87,8 @@ mod test {
     use byteorder::BE;
 
     use crate::codec::{
-        check_order_preserving, check_round_trip, check_self_delimiting, Decode, DecodingVec,
-        Encode, Optional, OrderedU32, Pattern, Preceded, PrecededDecodeError, Str, Text, U32, U8,
+        Decode, DecodingVec, Encode, Optional, OrderedU32, Pattern, Preceded, PrecededDecodeError,
+        Str, Text, U8, U32, check_order_preserving, check_round_trip, check_self_delimiting,
     };
 
     enum Arrow {}

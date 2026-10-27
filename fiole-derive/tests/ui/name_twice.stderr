@@ -1,0 +1,5 @@
+error: `name` is given twice
+ --> tests/ui/name_twice.rs:4:26
+  |
+4 | #[fiole(name = KeyCodec, name = OtherCodec)]
+  |                          ^^^^

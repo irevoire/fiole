@@ -10,6 +10,9 @@ authors = ["Tamo <irevoire@hotmail.fr>"]
 license = "MIT OR Apache-2.0"
 categories = ["database", "api-bindings", "database-implementations"]
 
+[workspace]
+members = ["fiole-derive"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--generate-link-to-definition"]
@@ -19,6 +22,7 @@ arbitrary = { version = "1.5.0", optional = true }
 byteorder = "1.5.0"
 byteview = "0.10.2"
 facet = { version = "0.46", optional = true }
+fiole-derive = { path = "fiole-derive", version = "0.3.0", optional = true }
 facet-json = { version = "0.46", optional = true }
 facet-postcard = { version = "0.46", optional = true }
 facet-msgpack = { version = "0.46", optional = true }
@@ -44,6 +48,8 @@ serde_json = ["dep:serde_json", "serde"]
 serde_postcard = ["postcard", "serde"]
 serde_msgpack = ["rmp-serde", "serde"]
 roaring = ["dep:roaring"]
+# `#[derive(Fiole)]`, to define a codec from your structure directly
+derive = ["dep:fiole-derive"]
 
 [dev-dependencies]
 arbitrary = { version = "1.5.0", features = ["derive"] }

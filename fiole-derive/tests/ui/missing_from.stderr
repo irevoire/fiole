@@ -1,0 +1,27 @@
+error[E0277]: the trait bound `KeyError: From<TextDecodeError<ParseIntError>>` is not satisfied
+  --> tests/ui/missing_from.rs:21:21
+   |
+21 |     #[fiole(codec = Text<u32>)]
+   |                     ^^^^ unsatisfied trait bound
+   |
+help: the trait `From<TextDecodeError<ParseIntError>>` is not implemented for `KeyError`
+      but trait `From<Infallible>` is implemented for it
+  --> tests/ui/missing_from.rs:9:1
+   |
+ 9 | impl From<Infallible> for KeyError {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: for that trait implementation, expected `Infallible`, found `TextDecodeError<ParseIntError>`
+
+error[E0277]: the trait bound `KeyError: From<std::io::Error>` is not satisfied
+  --> tests/ui/missing_from.rs:19:21
+   |
+19 |     #[fiole(codec = U8)]
+   |                     ^^ unsatisfied trait bound
+   |
+help: the trait `From<std::io::Error>` is not implemented for `KeyError`
+      but trait `From<Infallible>` is implemented for it
+  --> tests/ui/missing_from.rs:9:1
+   |
+ 9 | impl From<Infallible> for KeyError {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: for that trait implementation, expected `Infallible`, found `std::io::Error`

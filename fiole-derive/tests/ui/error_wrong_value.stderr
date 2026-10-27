@@ -1,0 +1,5 @@
+error: `error` is the error type of the codec, like `error = MyError`
+ --> tests/ui/error_wrong_value.rs:4:17
+  |
+4 | #[fiole(error = 1)]
+  |                 ^

@@ -1,0 +1,5 @@
+error: a struct without fields has nothing to write: use the `Unit` codec instead
+ --> tests/ui/no_fields.rs:4:8
+  |
+4 | struct Key;
+  |        ^^^

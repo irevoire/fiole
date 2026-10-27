@@ -1,0 +1,8 @@
+error[E0277]: a field of type `u16` can't be written with the codec `U8`
+ --> tests/ui/field_not_the_encoded_item.rs:7:21
+  |
+7 |     #[fiole(codec = U8)]
+  |                     ^^ `U8` doesn't write a `u16`
+  |
+  = help: the trait `fiole::derive_support::EncodedBy<U8>` is not implemented for `u16`
+  = note: a field must be the item its codec writes, or borrow it

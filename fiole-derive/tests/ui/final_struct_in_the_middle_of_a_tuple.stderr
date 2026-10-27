@@ -1,0 +1,19 @@
+error[E0599]: the associated function or constant `encode_alloc` exists for tuple `(Inner, U8)`, but its trait bounds were not satisfied
+  --> tests/ui/final_struct_in_the_middle_of_a_tuple.rs:20:20
+   |
+ 6 | struct Inner {
+   | ------------ doesn't satisfy `Inner: SelfDelimiting`
+...
+20 |     <(Inner, U8)>::encode_alloc(&(inner, 3)).unwrap();
+   |                    ^^^^^^^^^^^^ associated function or constant cannot be called on `(Inner, U8)` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `Inner: SelfDelimiting`
+           which is required by `(Inner, U8): Encode`
+           `(Inner, U8): Encode`
+           which is required by `&(Inner, U8): Encode`
+note: the trait `SelfDelimiting` must be implemented
+  --> $WORKSPACE/src/codec/mod.rs
+   |
+   | pub trait SelfDelimiting {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^

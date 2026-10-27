@@ -85,6 +85,39 @@
 //! (first element) and it's tail (the rest).
 //! [`crate::Keyspace::prefixed`] let's you specify the head and returns
 //! a keyspace now expecting the tail to be specified as its key.
+//!
+//! # Deriving a codec
+//!
+//! With the `derive` feature, `#[derive(Fiole)]` makes a struct a codec,
+//! written exactly like the tuple of the codecs of its fields. Each field
+//! says its codec with `#[fiole(codec = ...)]`:
+//!
+//! ```
+//! # #[cfg(feature = "derive")] {
+//! use fiole::Fiole;
+//! use fiole::codec::{Decode, DecodingVec, Encode, Fixed, Optional, Preceded, Terminated, Text};
+//!
+//! #[derive(Debug, PartialEq, Fiole)]
+//! struct LogKey {
+//!     #[fiole(codec = Terminated<Text<u64>>)]
+//!     received_at: u64,
+//!     #[fiole(codec = Fixed<4, Text<u32>>)]
+//!     device: u32,
+//!     #[fiole(codec = Optional<Preceded<Text<u16>>>)]
+//!     location: Option<u16>,
+//! }
+//!
+//! let key = LogKey { received_at: 12, device: 1234, location: None };
+//! let bytes = LogKey::encode_alloc(&key).unwrap().finish();
+//! assert_eq!(bytes, b"12\x001234");
+//! assert_eq!(LogKey::decode(&mut DecodingVec::new(bytes)).unwrap(), key);
+//! # }
+//! ```
+//!
+#![cfg_attr(
+    feature = "derive",
+    doc = "See [`Fiole`](crate::Fiole) for its attributes, the errors, generics and nested structs."
+)]
 
 use std::convert::Infallible;
 
@@ -173,6 +206,11 @@ pub use roaring::*;
 ///
 /// Only implement it on your own codec if its [`Decode::decode`] never reads
 /// past the bytes written by its [`Encode::encode`], whatever bytes follow.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` decodes everything till the end, so it can't be followed by anything",
+    label = "it can only be the last element of a tuple of codecs, or the last field of a struct deriving `Fiole`",
+    note = "wrap it in `Fixed`, `Terminated` or `SizedCodec` for it to know where it ends"
+)]
 pub trait SelfDelimiting {}
 
 impl<T: SelfDelimiting + ?Sized> SelfDelimiting for &T {}

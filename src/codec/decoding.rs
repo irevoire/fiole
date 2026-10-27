@@ -4,6 +4,12 @@ use byteview::ByteView;
 use fjall::Slice;
 
 /// Define how to decode an object from the bytes stored in fjall to your type.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` isn't a codec: it can't decode anything",
+    label = "not a codec",
+    note = "the codecs are types like `Str`, `OrderedU32` or `SerdeJson<T>` in `fiole::codec`, which say how an item is written",
+    note = "the `codec` of a field of a struct deriving `Fiole` must be one of them"
+)]
 pub trait Decode {
     /// The type to decode.
     type Item;

@@ -1,0 +1,22 @@
+[package]
+name = "fiole-derive"
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.90"
+description = "The derive macros of fiole"
+documentation = "https://docs.rs/fiole"
+repository = "https://github.com/irevoire/fiole"
+authors = ["Tamo <irevoire@hotmail.fr>"]
+license = "MIT OR Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = "2"
+
+[dev-dependencies]
+fiole = { path = "..", features = ["derive"] }
+trybuild = "1"

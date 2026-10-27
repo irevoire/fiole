@@ -1,0 +1,5 @@
+error: `codec` is the codec the field is written with, like `codec = Terminated<Str>`
+ --> tests/ui/field_not_a_type.rs:5:21
+  |
+5 |     #[fiole(codec = 1)]
+  |                     ^

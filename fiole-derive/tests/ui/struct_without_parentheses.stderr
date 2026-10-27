@@ -1,0 +1,5 @@
+error: expected the keys of the struct, like `#[fiole(name = MyCodec)]`
+ --> tests/ui/struct_without_parentheses.rs:4:1
+  |
+4 | #[fiole]
+  | ^^^^^^^^

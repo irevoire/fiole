@@ -1,0 +1,5 @@
+error: `codec` needs a value, like `codec = Terminated<Str>`
+ --> tests/ui/field_codec_without_value.rs:5:13
+  |
+5 |     #[fiole(codec)]
+  |             ^^^^^

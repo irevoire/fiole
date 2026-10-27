@@ -1,0 +1,5 @@
+error: `codec` can only be given on a field, not on the struct: the struct takes `name` and `error`
+ --> tests/ui/codec_on_struct.rs:4:9
+  |
+4 | #[fiole(codec = fiole::codec::U8)]
+  |         ^^^^^

@@ -19,8 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo build --verbose --all-targets --all-features
-      - run: cargo test --verbose --all-targets --all-features
+      - run: cargo build --verbose --workspace --all-targets --all-features
+      # The compile errors of the derive are checked on stable only, below:
+      # their wording changes with the version of rustc
+      - run: cargo test --verbose --workspace --all-targets --all-features --exclude fiole-derive
+      # `--all-targets` doesn't run the doctests
+      - run: cargo test --verbose --workspace --doc --all-features
+      - if: matrix.toolchain == 'stable'
+        run: cargo test --verbose -p fiole-derive --all-features --test errors
   fmt:
     name: Format
     runs-on: ubuntu-latest
@@ -34,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
   doc:
     name: Documentation
     runs-on: ubuntu-latest
@@ -43,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
-      - run: cargo doc --all-features --no-deps
+      - run: cargo doc --workspace --all-features --no-deps
   features:
     name: Feature ${{ matrix.feature }} alone
     runs-on: ubuntu-latest
@@ -60,6 +66,7 @@ jobs:
           - roaring
           - jiff02
           - uuid
+          - derive
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
@@ -77,4 +84,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup toolchain install 1.90 && rustup default 1.90
-      - run: cargo test --all-targets --all-features
+      - run: cargo test --workspace --all-targets --all-features --exclude fiole-derive
+      - run: cargo test --workspace --doc --all-features

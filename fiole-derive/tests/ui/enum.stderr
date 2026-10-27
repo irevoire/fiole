@@ -1,0 +1,5 @@
+error: `Fiole` can only be derived for a struct, whose fields are written one after the other
+ --> tests/ui/enum.rs:4:1
+  |
+4 | enum Key {
+  | ^^^^

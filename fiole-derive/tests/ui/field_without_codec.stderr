@@ -1,0 +1,5 @@
+error: this field has no codec: every field must say what it's written with, like `#[fiole(codec = Terminated<Str>)]`, or `#[fiole(codec = Inner)]` for a struct deriving `Fiole`
+ --> tests/ui/field_without_codec.rs:6:5
+  |
+6 |     id: u32,
+  |     ^^

@@ -1,0 +1,8 @@
+error[E0277]: a field of type `String` can't be read with the codec `Terminated<fiole::codec::Str>`
+ --> tests/ui/field_not_the_decoded_item.rs:7:21
+  |
+7 |     #[fiole(codec = Terminated<Str>)]
+  |                     ^^^^^^^^^^ `Terminated<fiole::codec::Str>` doesn't read a `String`
+  |
+  = help: the trait `fiole::derive_support::DecodedBy<Terminated<fiole::codec::Str>>` is not implemented for `String`
+  = note: a field must be the item its codec reads, or be made from it with `From`
