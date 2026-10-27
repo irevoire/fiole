@@ -42,10 +42,11 @@
 -->
 <!--
   FAVICON: this file is an exact copy of logo.svg. Only the viewBox below differs:
-  it zooms in on the round bulb (centre (120, 209), radius 88) so the icon fills
+  it is a square centred on the round bulb (centre (120, 209), radius 88), cropped
+  so the same amount of outline shows on every side, and the icon fills
   its square at 16 to 32px. To update it, copy logo.svg and put this viewBox back.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="31 122 178 178" width="256" height="256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="31 120 178 178" width="256" height="256">
   <title>fiole</title>
 
   <defs>
