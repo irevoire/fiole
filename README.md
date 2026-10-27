@@ -116,12 +116,59 @@ A few things to keep in mind:
   prefix `ab` followed by the key `c` is the same key as the prefix `a`
   followed by the key `bc`. Ending your prefixes with `\0`, or giving them a
   fixed size, keeps sibling prefixes apart: `users\0` and `users2\0` can't
-  overlap. A keyspace can still write keys that fall under the prefix of one
-  of its children, e.g. `users` writing the key `\0\0\0\x2aname`.
+  overlap.
 - The prefix counts toward the 65535 bytes fjall allows per key, the methods
   taking a key panic if the prefix followed by the key is longer.
 - The methods working on the whole fjall keyspace, like
   [`Keyspace::approximate_len`], are only available on the root.
+
+# Deriving codecs
+
+With its `derive` feature, fiole lets you create codecs from a structure
+directly with with `#[derive(Fiole)]`. Each field has to specifies with which
+codec it's going to be encoded and decoded.
+All the fields are written one after the other in the order they're declared.
+A structure with two fields or more can be prefixed by its first field.
+
+```rust
+# #[cfg(feature = "derive")] {
+use fiole::{Database, Fiole, KeyspaceCreateOptions};
+use fiole::codec::{OrderedI64, OrderedU32, Str, Text};
+
+/// The posts of a user, by date.
+#[derive(Debug, PartialEq, Fiole)]
+struct PostKey {
+    #[fiole(codec = OrderedU32)]
+    user: u32,
+    #[fiole(codec = OrderedI64)]
+    posted_at: i64,
+    #[fiole(codec = Text<String>)]
+    slug: String,
+}
+
+let dir = tempfile::tempdir().unwrap();
+let db = Database::builder(dir.path()).unwrap();
+let posts = db.keyspace::<PostKey, Str>("posts", KeyspaceCreateOptions::default).unwrap();
+
+let mut wtxn = db.write_tx().unwrap();
+let key = PostKey { user: 42, posted_at: 1700, slug: "hello".to_string() };
+posts.insert(&mut wtxn, &key, "Hello world").unwrap();
+posts.insert(&mut wtxn, &PostKey { user: 42, posted_at: 1500, slug: "first".to_string() }, "First!").unwrap();
+posts.insert(&mut wtxn, &PostKey { user: 7, posted_at: 1600, slug: "other".to_string() }, "Hi").unwrap();
+
+assert_eq!(posts.get(&wtxn, &key).unwrap().as_deref(), Some("Hello world"));
+
+// The posts of the user 42, keyed by the other fields, sorted by date
+let kefir = posts.prefixed(&42).unwrap();
+let keys: Vec<(i64, String)> = kefir.iter(&wtxn).map(|guard| guard.key().unwrap()).collect();
+assert_eq!(keys, [(1500, "first".to_string()), (1700, "hello".to_string())]);
+wtxn.commit().unwrap().unwrap();
+# }
+```
+
+See [`Fiole`](https://docs.rs/fiole/latest/fiole/derive.Fiole.html) for
+everything the derive supports, and the next part to make sure your codecs
+behave as expected.
 
 # Testing your codecs
 
