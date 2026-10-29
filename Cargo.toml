@@ -40,6 +40,7 @@ facet-json = { version = "0.46", optional = true }
 facet-postcard = { version = "0.46", optional = true }
 facet-msgpack = { version = "0.46", optional = true }
 fjall = "3.1.12"
+flatbuffers = { version = "25.12.19", optional = true }
 postcard = { version = "1", features = ["alloc", "use-std"], optional = true }
 rmp-serde = { version = "1", optional = true }
 roaring = { version = "0.11", optional = true }
@@ -61,6 +62,7 @@ serde_json = ["dep:serde_json", "serde"]
 serde_postcard = ["postcard", "serde"]
 serde_msgpack = ["rmp-serde", "serde"]
 roaring = ["dep:roaring"]
+flatbuffers = ["dep:flatbuffers"]
 # `#[derive(Fiole)]`, to define a codec from your structure directly
 derive = ["dep:fiole-derive"]
 
