@@ -1,0 +1,16 @@
+// Schema of the tests of the `FlatBuffer` codec.
+// Regenerate `dog_generated.rs` with `flatc --rust -o src/codec/flatbuffers src/codec/flatbuffers/dog.fbs`
+
+enum Color : ubyte { White, Black, Brown }
+
+table Dog {
+  name: string;
+  color: Color;
+  paws: ubyte = 4;
+  drool_liters_per_day: float;
+  meals_per_day: ubyte;
+  poops_per_day: ubyte;
+  belly_shaven: bool;
+}
+
+root_type Dog;
