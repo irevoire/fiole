@@ -1,4 +1,6 @@
 #![doc = include_str!("../README.md")]
+// Says which feature enables each item in the documentation of docs.rs
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/irevoire/fiole/refs/heads/main/assets/favicon.svg"
 )]
